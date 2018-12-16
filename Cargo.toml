@@ -1,0 +1,12 @@
+[package]
+name = "deflate_png"
+version = "0.1.0"
+authors = [
+    "Raymond Dodge <git@rayrobdod.name>"
+]
+
+[[bin]]
+name = "check"
+path = "src/check.rs"
+
+[dependencies]
