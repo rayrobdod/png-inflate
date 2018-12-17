@@ -3,12 +3,9 @@
 mod png;
 
 use ::std::env::args;
-use ::std::io::Read;
 use ::std::option::Option;
 use ::std::result::Result;
 use ::std::string::String;
-
-const ERR_NO_MAGIC:&'static str = "Input file does not have PNG magic header";
 
 fn main() {
 	let mut program_name:Option<String> = Option::None;
@@ -33,28 +30,14 @@ fn main() {
 		let mut input_file = read_open_option.open(input_file)
 				.expect("base file does not exist");
 		
-		let mut magic:[u8;8] = [0,0,0,0,0,0,0,0];
-		input_file.read_exact(&mut magic).expect(ERR_NO_MAGIC);
-		if magic == png::MAGIC {
-			
-			loop {
-				match png::Chunk::read(&mut input_file) {
-					Result::Ok(x) => {
-						if &x.typ == b"IEND" {
-							println!("OK");
-							break;
-						}
-					},
-					Result::Err(x) => {
-						println!("{}", x);
-						::std::process::exit(1);
-					},
-				}
-			}
-			
-		} else {
-			println!("{}", ERR_NO_MAGIC);
-			::std::process::exit(2);
+		match png::read(&mut input_file) {
+			Result::Ok(_) => {
+				println!("OK");
+			},
+			Result::Err(x) => {
+				println!("{}", x);
+				::std::process::exit(1);
+			},
 		}
 	} else {
 		println!("Usage: {} input.png", program_name.unwrap_or("pngcheck".to_string()));

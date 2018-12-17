@@ -8,6 +8,39 @@ use ::std::vec::Vec;
 /// The PNG magic header
 pub const MAGIC:[u8;8] = [137, 80, 78, 71, 13, 10, 26, 10];
 
+
+/// Reads a png file
+pub fn read(file:&mut Read) -> Result<Vec<Chunk>, ReadError> {
+	let mut magic:[u8;8] = [0,0,0,0,0,0,0,0];
+	file.read_exact(&mut magic).map_err(|x| ReadError::Io(x)).and_then(|_| {
+		let magic = magic;
+		if magic == MAGIC {
+			let mut retval:Vec<Chunk> = Vec::new();
+
+			loop {
+				match Chunk::read(file) {
+					Result::Ok(x) => {
+						let typ = &x.typ.clone();
+						retval.push(x);
+						if typ == b"IEND" {
+							break Ok(retval);
+						}
+					},
+					Result::Err(x) => {
+						break Err(ReadError::from(x));
+					},
+				}
+			}
+		} else {
+			Err(ReadError::MagicMismatch(magic))
+		}
+	})
+}
+
+
+
+
+
 /// Represents a PNG chunk
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Chunk {
@@ -54,6 +87,40 @@ impl Chunk {
 
 
 
+
+/// Represents an error that can occur when decoding a PNG Chunk
+#[derive(Debug)]
+pub enum ReadError{
+	/** An IO error */
+	Io(::std::io::Error),
+	/** The chunk's typ is invalid (a byte was outside the range `A-Za-z`) */
+	InvalidTyp([u8;4]),
+	/** The calculated CRC did not match the given CRC */
+	CrcMismatch{stated:u32, calculated:u32},
+	/** The given magic header didn't match the expected PNG header */
+	MagicMismatch([u8;8]),
+}
+
+impl ::std::fmt::Display for ReadError {
+	fn fmt(&self, f:&mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+		match self {
+			ReadError::Io(x) => write!(f, "{}", x),
+			ReadError::InvalidTyp(x) => write!(f, "Illegal chunk type: {:?}", x),
+			ReadError::CrcMismatch{stated, calculated} => write!(f, "CRC mismatch: file {:x}; calculated {:x}", stated, calculated),
+			ReadError::MagicMismatch(x) => write!(f, "Magic didn't match expected: {:?}", x),
+		}
+	}
+}
+
+impl From<ChunkReadError> for ReadError {
+	fn from(src:ChunkReadError) -> ReadError {
+		match src {
+			ChunkReadError::Io(x) => ReadError::Io(x),
+			ChunkReadError::InvalidTyp(x) => ReadError::InvalidTyp(x),
+			ChunkReadError::CrcMismatch{stated, calculated} => ReadError::CrcMismatch{stated, calculated},
+		}
+	}
+}
 
 /// Represents an error that can occur when decoding a PNG Chunk
 #[derive(Debug)]
