@@ -9,4 +9,8 @@ authors = [
 name = "check"
 path = "src/check.rs"
 
+[[bin]]
+name = "deflate"
+path = "src/deflate.rs"
+
 [dependencies]

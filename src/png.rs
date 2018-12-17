@@ -1,6 +1,7 @@
 ///! http://www.libpng.org/pub/png/
 
 use ::std::io::Read;
+use ::std::io::Write;
 use ::std::iter::Iterator;
 use ::std::result::Result;
 use ::std::vec::Vec;
@@ -35,6 +36,14 @@ pub fn read(file:&mut Read) -> Result<Vec<Chunk>, ReadError> {
 			Err(ReadError::MagicMismatch(magic))
 		}
 	})
+}
+
+pub fn write(file:&mut Write, chunks:Vec<Chunk>) -> Result<(), ::std::io::Error> {
+	file.write_all(&MAGIC)?;
+	for chunk in chunks {
+		chunk.write(file)?;
+	}
+	Ok(())
 }
 
 
@@ -80,6 +89,14 @@ impl Chunk {
 				}
 			})
 		})
+	}
+
+	pub fn write(self, file:&mut Write) -> Result<(), ::std::io::Error> {
+		file.write_all(&u32_to_bytes(self.data.len() as u32))?;
+		file.write_all(&self.typ)?;
+		file.write_all(&self.data)?;
+		file.write_all(&u32_to_bytes(calculate_crc(self.typ.iter().chain(self.data.iter()))))?;
+		Ok(())
 	}
 }
 
@@ -160,6 +177,15 @@ fn bytes_to_u32(bytes:[u8;4]) -> u32 {
 	bytes.iter().zip(0..)
 		.map(|(byte, index)| u32::from(*byte) << ((3 - index) * 8))
 		.sum()
+}
+
+fn u32_to_bytes(a:u32) -> [u8;4] {
+	[
+		((a & 0xFF00_0000) >> 24) as u8,
+		((a & 0xFF_0000) >> 16) as u8,
+		((a & 0xFF00) >> 8) as u8,
+		(a & 0xFF) as u8,
+	]
 }
 
 const CRC_POLYNOMIAL:u32 = 0xedb8_8320;
