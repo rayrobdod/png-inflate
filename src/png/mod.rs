@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 ///! http://www.libpng.org/pub/png/
 
 use ::std::io::Read;
@@ -47,9 +48,6 @@ pub fn write(file:&mut Write, chunks:Vec<Chunk>) -> Result<(), ::std::io::Error>
 }
 
 
-
-
-
 /// Represents a PNG chunk
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Chunk {
@@ -58,27 +56,28 @@ pub struct Chunk {
 }
 
 impl Chunk {
+	/// Reads a PNG chunk from a data stream
 	pub fn read(file:&mut Read) -> Result<Chunk, ChunkReadError> {
 		let mut size:[u8;4] = [0,0,0,0];
 		file.read_exact(&mut size).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
 			let size = bytes_to_u32(size);
-			
+
 			let mut typ:[u8;4] = [0,0,0,0];
 			file.read_exact(&mut typ).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
 				let typ = typ;
-				
+
 				if ! typ.iter().all(|c| (0x41 <= *c && *c <= 0x5A) || (0x61 <= *c && *c <= 0x7A)) {
 					Err(ChunkReadError::InvalidTyp(typ))
 				} else {
 					let mut data:Vec<u8> = vec![0; u32_to_usize(size)];
 					file.read_exact(&mut data).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
 						let data = data;
-						
+
 						let mut stated_crc:[u8;4] = [0; 4];
 						file.read_exact(&mut stated_crc).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
 							let stated_crc = bytes_to_u32(stated_crc);
 							let cacluated_crc = calculate_crc(typ.iter().chain(data.iter()));
-							
+
 							if stated_crc == cacluated_crc {
 								Ok(Chunk{typ, data})
 							} else {
@@ -91,6 +90,7 @@ impl Chunk {
 		})
 	}
 
+	/// Writes a PNG chunk to a data stream
 	pub fn write(self, file:&mut Write) -> Result<(), ::std::io::Error> {
 		file.write_all(&u32_to_bytes(self.data.len() as u32))?;
 		file.write_all(&self.typ)?;
@@ -98,11 +98,12 @@ impl Chunk {
 		file.write_all(&u32_to_bytes(calculate_crc(self.typ.iter().chain(self.data.iter()))))?;
 		Ok(())
 	}
+
+	/// Returns whether the chunk type is safe to copy without knowing what it is
+	pub fn safe_to_copy(&self) -> bool {
+		return 0 != (self.typ[3] & 0x20);
+	}
 }
-
-
-
-
 
 
 /// Represents an error that can occur when decoding a PNG Chunk
@@ -161,8 +162,6 @@ impl ::std::fmt::Display for ChunkReadError {
 }
 
 
-
-
 #[cfg(target_pointer_width = "32")]
 fn u32_to_usize(a:u32) -> usize {
 	a as usize
@@ -205,25 +204,19 @@ fn calculate_crc<'a, I: IntoIterator<Item=&'a u8>>(buffer:I) -> u32 {
 }
 
 
-
-
-
-
-
 #[cfg(test)]
 mod tests {
 	mod calculate_crc {
 		use super::super::calculate_crc;
-		
+
 		#[test]
 		fn nul() {
 			let val:[u8;0] = [];
 			let exp:u32 = 0;
 			let res = calculate_crc(val.iter());
-			
 			assert!( exp == res, "{:x} != {:x}", exp, res );
 		}
-		
+
 		#[test]
 		fn iend() {
 			let val:[u8;4] = [0x49, 0x45, 0x4e, 0x44];
@@ -231,7 +224,7 @@ mod tests {
 			let res = calculate_crc(&val);
 			assert!( exp == res, "{:x} != {:x}", exp, res );
 		}
-		
+
 		#[test]
 		fn ihdr_1() {
 			let val:[u8;17] = [
@@ -244,6 +237,21 @@ mod tests {
 			assert!( exp == res, "{:x} != {:x}", exp, res );
 		}
 	}
+
+	mod chunk_safe_to_copy {
+		use super::super::Chunk;
+
+		#[test]
+		fn tru() {
+			let exp:bool = true;
+			let res = Chunk{typ:*b"IDAt", data:vec![]}.safe_to_copy();
+			assert!( exp == res );
+		}
+		#[test]
+		fn fals() {
+			let exp:bool = false;
+			let res = Chunk{typ:*b"IDAT", data:vec![]}.safe_to_copy();
+			assert!( exp == res );
+		}
+	}
 }
-
-

@@ -1,16 +1,16 @@
 [package]
-name = "deflate_png"
+name = "inflate_png"
 version = "0.1.0"
 authors = [
     "Raymond Dodge <git@rayrobdod.name>"
 ]
 
 [[bin]]
-name = "check"
+name = "png_check"
 path = "src/check.rs"
 
 [[bin]]
-name = "deflate"
-path = "src/deflate.rs"
+name = "png_inflate"
+path = "src/inflate.rs"
 
 [dependencies]
