@@ -1,5 +1,4 @@
-#![allow(dead_code)]
-
+///! Contains a numeric type that holds four bits of information
 //const b0000u4 = u4::_0;
 //const b0001u4 = u4::_1;
 //const b0010u4 = u4::_2;

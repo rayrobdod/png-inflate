@@ -16,7 +16,7 @@ fn main() {
 
 	match png::read(&mut input) {
 		Result::Ok(indata) => {
-			let outdata:Result<Vec<png::Chunk>, Error> = ConcatinateIdats::new(indata.iter().cloned()).map(|x| deflate_chunks(x, force)).collect();
+			let outdata:Result<Vec<png::Chunk>, Error> = indata.iter().cloned().concat_idats().map(|x| deflate_chunks(x, force)).collect();
 
 			match outdata {
 				Result::Ok(outdata) => {
@@ -118,11 +118,18 @@ impl <I: Iterator<Item=png::Chunk>> ConcatinateIdats<I> {
 	}}
 }
 
+trait IteratorExt {
+	fn concat_idats(self) -> ConcatinateIdats<Self> where Self:Sized + Iterator<Item=png::Chunk>;
+}
+impl <I: Sized + Iterator<Item=png::Chunk>> IteratorExt for I {
+	fn concat_idats(self) -> ConcatinateIdats<I> where Self:Sized + Iterator<Item=png::Chunk> { ConcatinateIdats::new(self) }
+}
+
 #[cfg(test)]
 mod tests {
 	mod concatinate_idats {
 		use super::super::png;
-		use super::super::ConcatinateIdats;
+		use super::super::IteratorExt;
 
 		#[test]
 		fn concat() {
@@ -130,7 +137,7 @@ mod tests {
 				png::Chunk{typ : *b"IDAT", data: b"12345".to_vec()},
 				png::Chunk{typ : *b"IDAT", data: b"6789A".to_vec()},
 			];
-			let mut dut = ConcatinateIdats::new(data.iter().cloned());
+			let mut dut = data.iter().cloned().concat_idats();
 			assert_eq!(png::Chunk{typ : *b"IDAT", data: b"123456789A".to_vec()}, dut.next().unwrap());
 			assert!(dut.next().is_none());
 		}

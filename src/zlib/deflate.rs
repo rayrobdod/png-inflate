@@ -1,4 +1,3 @@
-#![allow(unused_parens)]
 use super::u4;
 use super::Bits;
 
@@ -62,8 +61,8 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 		match typ {
 			0 => { // no compression
 				let mut bytes = bitreader.discard_til_byte_boundary();
-				let len = u8_concat_rev(option_to_result(bytes.next())?, option_to_result(bytes.next())?);
-				let nlen = u8_concat_rev(option_to_result(bytes.next())?, option_to_result(bytes.next())?);
+				let len = u16_from_le_bytes(option_to_result(bytes.next())?, option_to_result(bytes.next())?);
+				let nlen = u16_from_le_bytes(option_to_result(bytes.next())?, option_to_result(bytes.next())?);
 				if len != !nlen {
 					return Err(InflateError::NonCompressedLengthInvalid);
 				}
@@ -169,8 +168,8 @@ pub fn deflate_immediate<I: Iterator<Item=u8>>(input:I) -> Vec<u8> {
 	let length = input.len();
 	let nlength = !length;
 	// TODO: split into less-than-u16-sized chunks
-	let length = u16_split_rev(length as u16);
-	let nlength = u16_split_rev(nlength as u16);
+	let length = u16_to_le_bytes(length as u16);
+	let nlength = u16_to_le_bytes(nlength as u16);
 
 	[1 as u8].iter()
 			.chain(length.iter())
@@ -252,7 +251,7 @@ impl DynamicHuffmanCodes {
 			index_code += (u4::_F - self.backing[index].length + u4::_1).nth_bit();
 			index_code = u16_reverse_bits(index_code);
 			index += 1;
-			if (index >= self.backing.len()) {
+			if index >= self.backing.len() {
 				panic!("Code not found");
 			}
 			//eprintln!("    Index Code: {:0w$b}", index_code, w = usize::from(self.backing[index].length));
@@ -262,20 +261,20 @@ impl DynamicHuffmanCodes {
 
 /// Appends values to the results vector based on the provided meta code, and possibly the next few bits in the bitreader.
 fn act_upon_meta_code<I: Iterator<Item=u8>>(results:&mut Vec<u4>, bitreader:&mut Bits<I>, code:u16) -> Result<(), InflateError> {
-	if (code < 16) {
+	if code < 16 {
 		results.push(u4::truncate(code as u8));
-	} else if (code == 16) {
+	} else if code == 16 {
 		let prev_code = results[results.len() - 1];
 		let times = 3 + option_to_result(bitreader.read_n_rev(u4::_2))?;
 		for _ in 0..times {
 			results.push(prev_code);
 		}
-	} else if (code == 17) {
+	} else if code == 17 {
 		let times = 3 + option_to_result(bitreader.read_n_rev(u4::_3))?;
 		for _ in 0..times {
 			results.push(u4::_0);
 		}
-	} else if (code == 18) {
+	} else if code == 18 {
 		let times = 11 + option_to_result(bitreader.read_n_rev(u4::_7))?;
 		for _ in 0..times {
 			results.push(u4::_0);
@@ -286,11 +285,13 @@ fn act_upon_meta_code<I: Iterator<Item=u8>>(results:&mut Vec<u4>, bitreader:&mut
 	Ok(())
 }
 
-fn u8_concat_rev(a:u8, b:u8) -> u16 {
+/// "u16::from_le_bytes is an experimental API"
+fn u16_from_le_bytes(a:u8, b:u8) -> u16 {
 	u16::from(a) | (u16::from(b) << 8)
 }
 
-fn u16_split_rev(a:u16) -> [u8; 2] {
+/// "u16::to_le_bytes is an experimental API"
+fn u16_to_le_bytes(a:u16) -> [u8; 2] {
 	[(a & 0xFF) as u8, ((a >> 8) & 0xFF) as u8]
 }
 

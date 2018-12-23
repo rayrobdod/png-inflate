@@ -124,9 +124,9 @@ fn option_to_result<A>(a:Option<A>) -> Result<A, InflateError> {
 /// Decompresses a zlib stream
 pub fn inflate(r : &[u8]) -> Result<Vec<u8>, InflateError> {
 	let mut r = r.iter().cloned();
-	let _header = Header::read(u8_concat(option_to_result(r.next())?, option_to_result(r.next())?))?;
+	let _header = Header::read(u16_from_be_bytes(option_to_result(r.next())?, option_to_result(r.next())?))?;
 	let result = deflate::inflate(&mut r)?;
-	let given_chksum = bytes_to_u32([
+	let given_chksum = u32_from_be_bytes([
 		option_to_result(r.next())?,
 		option_to_result(r.next())?,
 		option_to_result(r.next())?,
@@ -144,18 +144,20 @@ pub fn inflate(r : &[u8]) -> Result<Vec<u8>, InflateError> {
 
 /// Store the the input in a zlib stream entirely using immediate mode
 pub fn deflate_immediate(r : &[u8]) -> Vec<u8> {
-	u16_split(Header::new(u4::_7, CompressionLevel::Fastest).write()).iter().cloned()
+	u16_to_be_bytes(Header::new(u4::_7, CompressionLevel::Fastest).write()).iter().cloned()
 			.chain(deflate::deflate_immediate(r.iter().cloned()))
-			.chain(u32_to_bytes(adler32(r)).iter().cloned())
+			.chain(u32_to_be_bytes(adler32(r)).iter().cloned())
 			.collect()
 }
 
 
-fn u8_concat(a:u8, b:u8) -> u16 {
+/// "u16::from_be_bytes is an experimental API"
+fn u16_from_be_bytes(a:u8, b:u8) -> u16 {
 	(u16::from(a) << 8) | u16::from(b)
 }
 
-fn u16_split(a:u16) -> [u8; 2] {
+/// "u16::to_be_bytes is an experimental API"
+fn u16_to_be_bytes(a:u16) -> [u8; 2] {
 	[((a >> 8) & 0xFF) as u8, (a & 0xFF) as u8]
 }
 
@@ -177,13 +179,15 @@ fn adler32(input:&[u8]) -> u32 {
 }
 
 
-fn bytes_to_u32(bytes:[u8;4]) -> u32 {
+/// "u32::from_be_bytes is an experimental API"
+fn u32_from_be_bytes(bytes:[u8;4]) -> u32 {
 	bytes.iter().zip(0..)
 		.map(|(byte, index)| u32::from(*byte) << ((3 - index) * 8))
 		.sum()
 }
 
-fn u32_to_bytes(a:u32) -> [u8;4] {
+/// "u32::to_be_bytes is an experimental API"
+fn u32_to_be_bytes(a:u32) -> [u8;4] {
 	[
 		((a & 0xFF00_0000) >> 24) as u8,
 		((a & 0xFF_0000) >> 16) as u8,

@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 ///! http://www.libpng.org/pub/png/
 
 use ::std::io::Read;
@@ -60,7 +59,7 @@ impl Chunk {
 	pub fn read(file:&mut Read) -> Result<Chunk, ChunkReadError> {
 		let mut size:[u8;4] = [0,0,0,0];
 		file.read_exact(&mut size).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
-			let size = bytes_to_u32(size);
+			let size = u32_from_be_bytes(size);
 
 			let mut typ:[u8;4] = [0,0,0,0];
 			file.read_exact(&mut typ).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
@@ -75,7 +74,7 @@ impl Chunk {
 
 						let mut stated_crc:[u8;4] = [0; 4];
 						file.read_exact(&mut stated_crc).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
-							let stated_crc = bytes_to_u32(stated_crc);
+							let stated_crc = u32_from_be_bytes(stated_crc);
 							let cacluated_crc = calculate_crc(typ.iter().chain(data.iter()));
 
 							if stated_crc == cacluated_crc {
@@ -92,10 +91,10 @@ impl Chunk {
 
 	/// Writes a PNG chunk to a data stream
 	pub fn write(self, file:&mut Write) -> Result<(), ::std::io::Error> {
-		file.write_all(&u32_to_bytes(self.data.len() as u32))?;
+		file.write_all(&u32_to_be_bytes(self.data.len() as u32))?;
 		file.write_all(&self.typ)?;
 		file.write_all(&self.data)?;
-		file.write_all(&u32_to_bytes(calculate_crc(self.typ.iter().chain(self.data.iter()))))?;
+		file.write_all(&u32_to_be_bytes(calculate_crc(self.typ.iter().chain(self.data.iter()))))?;
 		Ok(())
 	}
 
@@ -172,13 +171,15 @@ fn u32_to_usize(a:u32) -> usize {
 	a as usize
 }
 
-fn bytes_to_u32(bytes:[u8;4]) -> u32 {
+/// "u32::from_be_bytes is an experimental API"
+fn u32_from_be_bytes(bytes:[u8;4]) -> u32 {
 	bytes.iter().zip(0..)
 		.map(|(byte, index)| u32::from(*byte) << ((3 - index) * 8))
 		.sum()
 }
 
-fn u32_to_bytes(a:u32) -> [u8;4] {
+/// "u32::to_be_bytes is an experimental API"
+fn u32_to_be_bytes(a:u32) -> [u8;4] {
 	[
 		((a & 0xFF00_0000) >> 24) as u8,
 		((a & 0xFF_0000) >> 16) as u8,
