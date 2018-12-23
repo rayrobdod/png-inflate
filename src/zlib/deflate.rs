@@ -165,17 +165,19 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 /// Store the the input in a deflate stream entirely using immediate mode (00)
 pub fn deflate_immediate<I: Iterator<Item=u8>>(input:I) -> Vec<u8> {
 	let input:Vec<u8> = input.collect();
-	let length = input.len();
-	let nlength = !length;
-	// TODO: split into less-than-u16-sized chunks
-	let length = u16_to_le_bytes(length as u16);
-	let nlength = u16_to_le_bytes(nlength as u16);
-
-	[1 as u8].iter()
-			.chain(length.iter())
-			.chain(nlength.iter())
-			.chain(input.iter())
-			.cloned().collect()
+	let input = input.chunks(0xFFFF);
+	
+	let last_item = input.len() - 1;
+	let input = input.zip(0..).map(|(chunk, idx)| (chunk, idx == last_item));
+	// I'd love to use an Iterator::flat_map here, but I can't figure out how to get the slices in the flat_map to live long enough
+	let mut retval:Vec<u8> = Vec::new();
+	for (chunk, is_last) in input {
+		retval.push(u8::from(is_last));
+		retval.extend(u16_to_le_bytes(chunk.len() as u16).iter());
+		retval.extend(u16_to_le_bytes(!(chunk.len() as u16)).iter());
+		retval.extend(chunk.iter());
+	}
+	retval
 }
 
 /// Decode a single a fixed-mode huffman code from the given stream

@@ -221,4 +221,28 @@ mod tests {
 			assert!( exp == res, "{:x} != {:x}", exp, res );
 		}
 	}
+	mod adler32 {
+		use super::super::adler32;
+		#[test]
+		fn wikipedia() {
+			let exp = 0x11E60398;
+			let data = b"Wikipedia";
+			let res = adler32(data);
+			assert_eq!(exp, res);
+		}
+		#[test]
+		fn zero_x1() {
+			let exp = 0x00010001;
+			let data = [0u8; 1];
+			let res = adler32(&data);
+			assert_eq!(exp, res);
+		}
+		#[test]
+		fn zero_x65536() {
+			let exp = 0x000F0001;
+			let data = [0u8; 65536];
+			let res = adler32(&data);
+			assert_eq!(exp, res, "{:x} {:x}", exp, res);
+		}
+	}
 }
