@@ -124,7 +124,7 @@ fn option_to_result<A>(a:Option<A>) -> Result<A, InflateError> {
 /// Decompresses a zlib stream
 pub fn inflate(r : &[u8]) -> Result<Vec<u8>, InflateError> {
 	let mut r = r.iter().cloned();
-	let _header = Header::read(u8_concat(option_to_result(r.next())?, option_to_result(r.next())?));
+	let _header = Header::read(u8_concat(option_to_result(r.next())?, option_to_result(r.next())?))?;
 	let result = deflate::inflate(&mut r)?;
 	let given_chksum = bytes_to_u32([
 		option_to_result(r.next())?,

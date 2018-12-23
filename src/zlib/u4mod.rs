@@ -1,5 +1,15 @@
 #![allow(dead_code)]
 
+//const b0000u4 = u4::_0;
+//const b0001u4 = u4::_1;
+//const b0010u4 = u4::_2;
+//....
+//const b1111u4 = u4::_F;
+//const x0u4 = u4::_0;
+//const x1u4 = u4::_1;
+//....
+//const xFu4 = u4::_F;
+
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 /// Represents a four-bit number
@@ -55,6 +65,12 @@ impl From<u4> for u8 {
 
 impl From<u4> for usize { fn from(src:u4) -> usize { usize::from(u8::from(src)) } }
 
+impl ::std::ops::AddAssign for u4 {
+	fn add_assign(&mut self, other:u4) -> () {
+		*self = *self + other;
+	}
+}
+
 impl ::std::ops::Add for u4 {
 	type Output = u4;
 	#[cfg(debug_assertions)]
@@ -68,7 +84,24 @@ impl ::std::ops::Add for u4 {
 	}
 	#[cfg(not(debug_assertions))]
 	fn add(self, other:u4) -> u4 {
-		u4::truncate(u8::from(self) + u8::from(other));
+		u4::truncate(u8::from(self) + u8::from(other))
+	}
+}
+
+impl ::std::ops::Sub for u4 {
+	type Output = u4;
+	#[cfg(debug_assertions)]
+	fn sub(self, other:u4) -> u4 {
+		let (chk, ret) = u4::split(u8::from(self) - u8::from(other));
+		if chk != u4::_0 {
+			panic!("Overflow in u4::sub -- {:?} - {:?}", self, other)
+		} else {
+			ret
+		}
+	}
+	#[cfg(not(debug_assertions))]
+	fn sub(self, other:u4) -> u4 {
+		u4::truncate(u8::from(self) - u8::from(other))
 	}
 }
 

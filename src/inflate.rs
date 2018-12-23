@@ -94,9 +94,9 @@ impl <I: Iterator<Item=png::Chunk>> Iterator for ConcatinateIdats<I> {
 	fn next(&mut self) -> Option<png::Chunk> {
 		match self.backing.next() {
 			None => None,
-			Some(x) => {
-				if x.typ == *b"IDAT" {
-					let mut retval_data = x.data.clone();
+			Some(sum) => {
+				if sum.typ == *b"IDAT" {
+					let mut retval_data = sum.data;
 					while self.backing.peek().map(|x| x.typ) == Some(*b"IDAT") {
 						retval_data.append(&mut self.backing.next().unwrap().data.clone());
 					}
@@ -105,7 +105,7 @@ impl <I: Iterator<Item=png::Chunk>> Iterator for ConcatinateIdats<I> {
 						data: retval_data,
 					})
 				} else {
-					Some(x)
+					Some(sum)
 				}
 			}
 		}
@@ -116,4 +116,23 @@ impl <I: Iterator<Item=png::Chunk>> ConcatinateIdats<I> {
 	fn new(backing:I) -> ConcatinateIdats<I> { ConcatinateIdats {
 		backing : backing.peekable()
 	}}
+}
+
+#[cfg(test)]
+mod tests {
+	mod concatinate_idats {
+		use super::super::png;
+		use super::super::ConcatinateIdats;
+
+		#[test]
+		fn concat() {
+			let data = [
+				png::Chunk{typ : *b"IDAT", data: b"12345".to_vec()},
+				png::Chunk{typ : *b"IDAT", data: b"6789A".to_vec()},
+			];
+			let mut dut = ConcatinateIdats::new(data.iter().cloned());
+			assert_eq!(png::Chunk{typ : *b"IDAT", data: b"123456789A".to_vec()}, dut.next().unwrap());
+			assert!(dut.next().is_none());
+		}
+	}
 }

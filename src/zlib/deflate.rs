@@ -1,3 +1,4 @@
+#![allow(unused_parens)]
 use super::u4;
 use super::Bits;
 
@@ -21,6 +22,14 @@ const DISTANCE_EXTRA_BITS:[u4;30] = [
 	u4::_6, u4::_7, u4::_7, u4::_8, u4::_8,
 	u4::_9, u4::_9, u4::_A, u4::_A, u4::_B,
 	u4::_B, u4::_C, u4::_C, u4::_D, u4::_D,
+];
+
+/// The order that meta codes are stored in 10 mode codings
+const META_CODES_ORDER:[usize;19] = [
+	16, 17, 18, 0, 8,
+	7, 9, 6, 10, 5,
+	11, 4, 12, 3, 13,
+	2, 14, 1, 15,
 ];
 
 /// An error that can occur while inflating a stream
@@ -66,7 +75,7 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 			1 => { // fixed codes
 				loop {
 					let code = option_to_result(decode_fixed_huffman_code(&mut bitreader))?;
-					eprintln!("{}", code);
+					//eprintln!("{}", code);
 					if code == 256 {
 						break;
 					} else if code < 256 {
@@ -79,10 +88,10 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 
 						let distance_index = option_to_result(bitreader.read_n(u4::_5))?;
 						let distance_extra_bits = DISTANCE_EXTRA_BITS[usize::from(distance_index)];
-						let distance:u16 = 1 + option_to_result(bitreader.read_n(distance_extra_bits))?
+						let distance:u16 = 1 + option_to_result(bitreader.read_n_rev(distance_extra_bits))?
 								+ DISTANCE_EXTRA_BITS.iter().take(usize::from(distance_index)).map(|x| x.nth_bit()).sum::<u16>();
 
-						eprintln!("\t{} {} ({})", length, distance, distance_index);
+						//eprintln!("\t{} {} ({})", length, distance, distance_index);
 						for _ in 0..length {
 							let index_to_copy = retval.len() - usize::from(distance);
 							let value_to_copy = retval.get(index_to_copy).unwrap().clone();
@@ -92,7 +101,59 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 				}
 			}
 			2 => { // custom codes
-				panic!("TODO");
+				let num_length_codes = 257 + option_to_result(bitreader.read_n_rev(u4::_5))?;
+				let num_distance_codes = 1 + option_to_result(bitreader.read_n_rev(u4::_5))?;
+				let num_meta_codes = 4 + option_to_result(bitreader.read_n_rev(u4::_4))?;
+
+				//eprintln!("Lengths: {} {} {}", num_meta_codes, num_length_codes, num_distance_codes);
+				let mut meta_code_lengths:[u4; 19] = [u4::_0; 19];
+				for x in 0..usize::from(num_meta_codes) {
+					meta_code_lengths[META_CODES_ORDER[x]] =
+							u4::truncate(option_to_result(bitreader.read_n_rev(u4::_3))? as u8);
+				}
+
+				let meta_codes = DynamicHuffmanCodes::from_lengths(&meta_code_lengths);
+
+				let mut length_codes:Vec<u4> = Vec::new();
+				while length_codes.len() < usize::from(num_length_codes) {
+					let meta = option_to_result(meta_codes.decode(&mut bitreader))?;
+					act_upon_meta_code(&mut length_codes, &mut bitreader, meta)?;
+				}
+				let length_codes = DynamicHuffmanCodes::from_lengths(&length_codes);
+
+				let mut distance_codes:Vec<u4> = Vec::new();
+				while distance_codes.len() < usize::from(num_distance_codes) {
+					let meta = option_to_result(meta_codes.decode(&mut bitreader))?;
+					act_upon_meta_code(&mut distance_codes, &mut bitreader, meta)?;
+				}
+				let distance_codes = DynamicHuffmanCodes::from_lengths(&distance_codes);
+
+				loop {
+					let code = option_to_result(length_codes.decode(&mut bitreader))?;
+					//eprintln!("{:x}", code);
+					if code == 256 {
+						break;
+					} else if code < 256 {
+						retval.push((code & 0xFF) as u8);
+					} else {
+						let length_index = code - 257;
+						let length_extra_bits = LENGTH_EXTRA_BITS[usize::from(length_index)];
+						let length:u16 = 3 + option_to_result(bitreader.read_n_rev(length_extra_bits))?
+								+ LENGTH_EXTRA_BITS.iter().take(usize::from(length_index)).map(|x| x.nth_bit()).sum::<u16>();
+
+						let distance_index = option_to_result(distance_codes.decode(&mut bitreader))?;
+						let distance_extra_bits = DISTANCE_EXTRA_BITS[usize::from(distance_index)];
+						let distance:u16 = 1 + option_to_result(bitreader.read_n_rev(distance_extra_bits))?
+								+ DISTANCE_EXTRA_BITS.iter().take(usize::from(distance_index)).map(|x| x.nth_bit()).sum::<u16>();
+
+						//eprintln!("\t{} {} ({})", length, distance, distance_index);
+						for _ in 0..length {
+							let index_to_copy = retval.len() - usize::from(distance);
+							let value_to_copy = retval.get(index_to_copy).unwrap().clone();
+							retval.push(value_to_copy);
+						}
+					}
+				}
 			}
 			_ => { // error
 				return Err(InflateError::InvalidBtype);
@@ -143,12 +204,103 @@ fn decode_fixed_huffman_code<I: Iterator<Item=u8>>(bitreader:&mut Bits<I>) -> Op
 	}
 }
 
+#[derive(Debug)]
+struct DynamicHuffmanCodeValue {
+	length : u4,
+	value : u16,
+}
+
+/// Huffman codes that are encoded in the PNG stream
+#[derive(Debug)]
+struct DynamicHuffmanCodes {
+	backing:Vec<DynamicHuffmanCodeValue>
+}
+
+impl DynamicHuffmanCodes {
+	/// Create the set of codes from the code lengths of each item
+	fn from_lengths(lengths:&[u4]) -> DynamicHuffmanCodes {
+		let mut lengths:Vec<DynamicHuffmanCodeValue> = lengths.iter().cloned().zip(0..)
+				.map(|(len, val)| DynamicHuffmanCodeValue{length:len, value:val})
+				.filter(|x| x.length != u4::_0).collect();
+		lengths.sort_by_key(|x| x.length);
+		DynamicHuffmanCodes{ backing:lengths }
+	}
+
+	/// Decodes a value using this set of dynamic huffman codes
+	fn decode<I: Iterator<Item=u8>>(&self, bitreader:&mut Bits<I>) -> Option<u16> {
+		let mut index:usize = 0;
+		let mut index_code:u16 = 0;
+		let mut read_code:u16 = 0;
+		let mut read_len:u4 = u4::_0;
+
+		//eprintln!("Enter");
+		//eprintln!("  self: {:?}", self);
+		loop {
+			//eprintln!("  Start of loop");
+			while read_len < self.backing[index].length {
+				read_code += if bitreader.next()? { read_len.nth_bit() } else { 0 };
+				read_len += u4::_1;
+				//eprintln!("    Read Code: {:0w$b}", read_code, w = usize::from(read_len));
+			}
+			if read_len == self.backing[index].length &&
+					read_code == index_code {
+				//eprintln!("    Ret Code: {:0w$b}", read_code, w = usize::from(read_len));
+				//eprintln!("    Retval: {}", self.backing[index].value);
+				break Some(self.backing[index].value)
+			}
+			index_code = u16_reverse_bits(index_code);
+			index_code += (u4::_F - self.backing[index].length + u4::_1).nth_bit();
+			index_code = u16_reverse_bits(index_code);
+			index += 1;
+			if (index >= self.backing.len()) {
+				panic!("Code not found");
+			}
+			//eprintln!("    Index Code: {:0w$b}", index_code, w = usize::from(self.backing[index].length));
+		}
+	}
+}
+
+/// Appends values to the results vector based on the provided meta code, and possibly the next few bits in the bitreader.
+fn act_upon_meta_code<I: Iterator<Item=u8>>(results:&mut Vec<u4>, bitreader:&mut Bits<I>, code:u16) -> Result<(), InflateError> {
+	if (code < 16) {
+		results.push(u4::truncate(code as u8));
+	} else if (code == 16) {
+		let prev_code = results[results.len() - 1];
+		let times = 3 + option_to_result(bitreader.read_n_rev(u4::_2))?;
+		for _ in 0..times {
+			results.push(prev_code);
+		}
+	} else if (code == 17) {
+		let times = 3 + option_to_result(bitreader.read_n_rev(u4::_3))?;
+		for _ in 0..times {
+			results.push(u4::_0);
+		}
+	} else if (code == 18) {
+		let times = 11 + option_to_result(bitreader.read_n_rev(u4::_7))?;
+		for _ in 0..times {
+			results.push(u4::_0);
+		}
+	} else {
+		panic!("Illegal meta code: {}", code);
+	}
+	Ok(())
+}
+
 fn u8_concat_rev(a:u8, b:u8) -> u16 {
 	u16::from(a) | (u16::from(b) << 8)
 }
 
 fn u16_split_rev(a:u16) -> [u8; 2] {
 	[(a & 0xFF) as u8, ((a >> 8) & 0xFF) as u8]
+}
+
+/// "u16::reverse_bits is an experimental API"
+fn u16_reverse_bits(a:u16) -> u16 {
+	let mut retval = 0;
+	for bit in 0..16 {
+		retval += if (a & (1 << bit)) != 0 { 1 << (15 - bit) } else { 0 }
+	}
+	retval
 }
 
 #[cfg(test)]
@@ -170,6 +322,53 @@ mod tests {
 			for i in 0..288 {
 				assert!( res[i], "i = {}", i );
 			}
+		}
+	}
+	mod dynamic_huffman_codes {
+		use super::super::DynamicHuffmanCodes;
+		use super::super::super::u4;
+		use super::super::super::Bits;
+		#[test]
+		fn two_constant_length() {
+			let dut = [u4::_1, u4::_1];
+			let dut = DynamicHuffmanCodes::from_lengths(&dut);
+
+			assert_eq!( 0, dut.decode(&mut Bits::new([0b0u8].iter().cloned())).unwrap() );
+			assert_eq!( 1, dut.decode(&mut Bits::new([0b1u8].iter().cloned())).unwrap() );
+		}
+		#[test]
+		fn four_constant_length() {
+			let dut = [u4::_2, u4::_2, u4::_2, u4::_2];
+			let dut = DynamicHuffmanCodes::from_lengths(&dut);
+
+			assert_eq!( 0, dut.decode(&mut Bits::new([0b00u8].iter().cloned())).unwrap() );
+			assert_eq!( 1, dut.decode(&mut Bits::new([0b10u8].iter().cloned())).unwrap() );
+			assert_eq!( 2, dut.decode(&mut Bits::new([0b01u8].iter().cloned())).unwrap() );
+			assert_eq!( 3, dut.decode(&mut Bits::new([0b11u8].iter().cloned())).unwrap() );
+		}
+		#[test]
+		fn four_constant_delta() {
+			let dut = [u4::_1, u4::_2, u4::_3, u4::_4];
+			let dut = DynamicHuffmanCodes::from_lengths(&dut);
+
+			assert_eq!( 0, dut.decode(&mut Bits::new([0b000_0u8].iter().cloned())).unwrap() );
+			assert_eq!( 1, dut.decode(&mut Bits::new([0b00_01u8].iter().cloned())).unwrap() );
+			assert_eq!( 2, dut.decode(&mut Bits::new([0b0_011u8].iter().cloned())).unwrap() );
+			assert_eq!( 3, dut.decode(&mut Bits::new([0b_0111u8].iter().cloned())).unwrap() );
+		}
+		#[test]
+		fn provided_sample() {
+			let dut = [u4::_3, u4::_3, u4::_3, u4::_3, u4::_3, u4::_2, u4::_4, u4::_4];
+			let dut = DynamicHuffmanCodes::from_lengths(&dut);
+
+			assert_eq!( 5, dut.decode(&mut Bits::new([0b00_00u8].iter().cloned())).unwrap() );
+			assert_eq!( 0, dut.decode(&mut Bits::new([0b0_010u8].iter().cloned())).unwrap() );
+			assert_eq!( 1, dut.decode(&mut Bits::new([0b0_110u8].iter().cloned())).unwrap() );
+			assert_eq!( 2, dut.decode(&mut Bits::new([0b0_001u8].iter().cloned())).unwrap() );
+			assert_eq!( 3, dut.decode(&mut Bits::new([0b0_101u8].iter().cloned())).unwrap() );
+			assert_eq!( 4, dut.decode(&mut Bits::new([0b0_011u8].iter().cloned())).unwrap() );
+			assert_eq!( 6, dut.decode(&mut Bits::new([0b_0111u8].iter().cloned())).unwrap() );
+			assert_eq!( 7, dut.decode(&mut Bits::new([0b_1111u8].iter().cloned())).unwrap() );
 		}
 	}
 	mod inflate {
@@ -206,21 +405,19 @@ mod tests {
 			let res = inflate(&mut dut).unwrap();
 			assert!( exp == res.as_slice(), "{:?}", res );
 		}
-
-		fn dfsa() {
-			let exp:[u8;1] = [0];
-			let dut:[u8;19] = [0x63, 0x64, 0x60, 0x60, 0xf8, 0x0f, 0xc4, 0x38, 0x01, 0x13, 0x94, 0xc6, 0x09, 0x86, 0x83, 0x02, 0x06, 0x06, 0x00];
+		#[test]
+		fn black_square_4x4() {
+			let exp:[u8; 68] = [
+				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
+				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
+				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
+				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
+			];
+			let dut:[u8;21] = [0x9d, 0xc8, 0xb1, 0x0d, 0x00, 0x00, 0x00, 0x82, 0x30, 0xff, 0x7f, 0x5a, 0x1d, 0x99, 0x21, 0x61, 0x69, 0x5e, 0xb9, 0x80, 0x01];
 			let mut dut = dut.iter().cloned();
 			let res = inflate(&mut dut).unwrap();
-			assert!( exp == res.as_slice(), "{:?}", res );
-		}
-
-		fn dfsa3() {
-			let exp:[u8;1] = [0];
-			let dut:[u8;22] = [0xe5, 0xca, 0x41, 0x0d, 0x00, 0x00, 0x00, 0x82, 0x40, 0xfb, 0x97, 0x56, 0x13, 0x50, 0x00, 0x36, 0x7e, 0x97, 0x57, 0x5a, 0x02, 0x06];
-			let mut dut = dut.iter().cloned();
-			let res = inflate(&mut dut).unwrap();
-			assert!( exp == res.as_slice(), "{:?}", res );
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
 		}
 	}
 }
