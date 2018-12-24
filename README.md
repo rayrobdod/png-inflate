@@ -1,3 +1,7 @@
+# Png Inflate
+[![Build Status](https://travis-ci.org/rayrobdod/png-inflate.svg?branch=master)](https://travis-ci.org/rayrobdod/png-inflate)
+[![Build status](https://ci.appveyor.com/api/projects/status/ypi8acefrievc54i/branch/master?svg=true)](https://ci.appveyor.com/project/rayrobdod/png-inflate/branch/master)
+
 PNG images contain deflate-compressed image data. ^(They can also contain metadata similarly compressed; the point
 stands.) Small changes to the raw image data can result in in disproportionately large changes in the compressed data.
 Especially if different editors with different compression schemes handle the data. In addition, compressed data does

@@ -1,0 +1,16 @@
+language: rust
+cache: cargo
+dist: trusty
+env:
+  - MODE=
+  - MODE=--release
+os:
+  - linux
+  - osx
+rust:
+  - nightly
+  - beta
+  - stable
+script:
+  - cargo build $MODE
+  - cargo test $MODE

@@ -1,0 +1,21 @@
+version: yml-{build}
+environment:
+  channel: stable
+  mode: --release
+  matrix:
+  - target: x86_64-pc-windows-msvc
+  - target: i686-pc-windows-msvc
+  - target: x86_64-pc-windows-gnu
+  - target: i686-pc-windows-gnu
+install:
+  #(New-Object Net.WebClient).DownloadFile('https://win.rustup.rs/', 'rustup-init.exe')
+- cmd: 'appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe'
+- cmd: 'rustup-init -y --default-toolchain %channel% --default-host %target%'
+- cmd: 'set PATH=%PATH%;%USERPROFILE%\.cargo\bin'
+build_script:
+- cmd: 'cargo build %MODE%'
+- cmd: '7z a target\release\png_inflate.exe.gz target\release\png_inflate.exe'
+test_script:
+- cmd: 'cargo test %MODE%'
+artifacts:
+- path: target\release\png_inflate.exe.gz
