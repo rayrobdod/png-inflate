@@ -84,6 +84,7 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 						let length_extra_bits = LENGTH_EXTRA_BITS[usize::from(length_index)];
 						let length:u16 = 3 + option_to_result(bitreader.read_n_rev(length_extra_bits))?
 								+ LENGTH_EXTRA_BITS.iter().take(usize::from(length_index)).map(|x| x.nth_bit()).sum::<u16>();
+						let length = if code == 285 {length - 1} else {length};
 
 						let distance_index = option_to_result(bitreader.read_n(u4::_5))?;
 						let distance_extra_bits = DISTANCE_EXTRA_BITS[usize::from(distance_index)];
@@ -112,6 +113,7 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 				}
 
 				let meta_codes = DynamicHuffmanCodes::from_lengths(&meta_code_lengths);
+				//eprintln!("{:?}", meta_codes);
 
 				let mut length_codes:Vec<u4> = Vec::new();
 				while length_codes.len() < usize::from(num_length_codes) {
@@ -139,6 +141,7 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 						let length_extra_bits = LENGTH_EXTRA_BITS[usize::from(length_index)];
 						let length:u16 = 3 + option_to_result(bitreader.read_n_rev(length_extra_bits))?
 								+ LENGTH_EXTRA_BITS.iter().take(usize::from(length_index)).map(|x| x.nth_bit()).sum::<u16>();
+						let length = if code == 285 {length - 1} else {length};
 
 						let distance_index = option_to_result(distance_codes.decode(&mut bitreader))?;
 						let distance_extra_bits = DISTANCE_EXTRA_BITS[usize::from(distance_index)];
@@ -167,7 +170,7 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 pub fn deflate_immediate<I: Iterator<Item=u8>>(input:I) -> Vec<u8> {
 	let input:Vec<u8> = input.collect();
 	let input = input.chunks(0xFFFF);
-	
+
 	let last_item = input.len() - 1;
 	let input = input.zip(0..).map(|(chunk, idx)| (chunk, idx == last_item));
 	// I'd love to use an Iterator::flat_map here, but I can't figure out how to get the slices in the flat_map to live long enough
@@ -375,7 +378,8 @@ mod tests {
 			assert_eq!( 7, dut.decode(&mut Bits::new([0b_1111u8].iter().cloned())).unwrap() );
 		}
 	}
-	mod inflate {
+
+	mod inflate_samples{
 		use super::super::inflate;
 		#[test]
 		fn immediate_mode() {
@@ -418,6 +422,112 @@ mod tests {
 				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
 			];
 			let dut:[u8;21] = [0x9d, 0xc8, 0xb1, 0x0d, 0x00, 0x00, 0x00, 0x82, 0x30, 0xff, 0x7f, 0x5a, 0x1d, 0x99, 0x21, 0x61, 0x69, 0x5e, 0xb9, 0x80, 0x01];
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+	}
+
+	mod inflate_instructions {
+		use super::super::inflate;
+
+		#[test]
+		fn immediate() {
+			let exp:Vec<u8> = (0..=255).collect();
+			let dut:Vec<u8> = [1,0,1,0xFF,0xFE].iter().cloned().chain(0..=255).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_coded_l003d1() {
+			let exp:Vec<u8> = (0..=255).chain([255, 255, 255].iter().cloned()).collect();
+			let dut:Vec<u8> = [0,0,1,0xFF,0xFE].iter().cloned().chain(0..=255).chain([0b00000_011, 0b0_00000_10, 0b000000].iter().cloned()).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_coded_l010d1() {
+			let exp:Vec<u8> = (0..=255).chain(std::iter::repeat(255).take(10)).collect();
+			let dut:Vec<u8> = [0,0,1,0xFF,0xFE].iter().cloned().chain(0..=255).chain([0b01000_011, 0b0_00000_00, 0b000000].iter().cloned()).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_coded_l257d1() {
+			let exp:Vec<u8> = (0..=255).chain(std::iter::repeat(255).take(257)).collect();
+			let dut:Vec<u8> = [0,0,1,0xFF,0xFE].iter().cloned().chain(0..=255).chain([0b00011_011, 0b_11110_001, 0, 0].iter().cloned()).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_coded_l258d1() {
+			let exp:Vec<u8> = (0..=255).chain(std::iter::repeat(255).take(258)).collect();
+			let dut:Vec<u8> = [0,0,1,0xFF,0xFE].iter().cloned().chain(0..=255).chain([0b00011_011, 0b_00000_101, 0].iter().cloned()).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_coded_l003d4() {
+			let exp:Vec<u8> = (0..=255).chain([252, 253, 254].iter().cloned()).collect();
+			let dut:Vec<u8> = [0,0,1,0xFF,0xFE].iter().cloned().chain(0..=255).chain([0b00000_011, 0b0_11000_10, 0b000000].iter().cloned()).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_coded_l003d97() {
+			let exp:Vec<u8> = (0..=255).chain([159, 160, 161].iter().cloned()).collect();
+			let dut:Vec<u8> = [0,0,1,0xFF,0xFE].iter().cloned().chain(0..=255).chain([0b00000_011, 0b0_10110_10, 0, 0].iter().cloned()).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_coded_l003d128() {
+			let exp:Vec<u8> = (0..=255).chain([128, 129, 130].iter().cloned()).collect();
+			let dut:Vec<u8> = [0,0,1,0xFF,0xFE].iter().cloned().chain(0..=255).chain([0b00000_011, 0b1_10110_10, 0b0000_1111, 0].iter().cloned()).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_codes_l003d24577() {
+			let base:Vec<u8> = std::iter::repeat(5).take(16).chain(std::iter::repeat(80).take(3)).chain(std::iter::repeat(120).take(24574)).collect();
+			let exp:Vec<u8> = base.iter().cloned().chain(std::iter::repeat(80).take(3)).collect();
+			let dut:Vec<u8> = [0,0x11,0x60,0xEE,0x9F].iter().cloned().chain(base).chain([0b00000_011, 0b0_10111_10, 0, 0, 0].iter().cloned()).collect();
+			let mut dut = dut.iter().cloned();
+			let res = inflate(&mut dut).unwrap();
+			assert_eq!( exp.len(), res.len(), "LENGTH");
+			assert!( exp.iter().zip(res.iter()).all(|(a,b)| a == b) );
+		}
+
+		#[test]
+		fn fixed_codes_l003d32768() {
+			let base:Vec<u8> = std::iter::repeat(5).take(16).chain(std::iter::repeat(80).take(3)).chain(std::iter::repeat(120).take(32768 - 3)).collect();
+			let exp:Vec<u8> = base.iter().cloned().chain(std::iter::repeat(80).take(3)).collect();
+			let dut:Vec<u8> = [0,0x10,0x80,0xEF,0x7F].iter().cloned().chain(base).chain([0b00000_011, 0b1_10111_10, 0b11111111, 0b1111, 0].iter().cloned()).collect();
 			let mut dut = dut.iter().cloned();
 			let res = inflate(&mut dut).unwrap();
 			assert_eq!( exp.len(), res.len(), "LENGTH");
