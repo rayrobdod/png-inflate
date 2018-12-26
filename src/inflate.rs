@@ -5,14 +5,14 @@
 mod png;
 mod zlib;
 
-use ::std::io::stdin;
-use ::std::io::stdout;
 use ::std::result::Result;
 
 fn main() {
-	let force:bool = false;
-	let mut input = stdin();
-	let mut output = stdout();
+	let args = ::std::env::args().fold(Args::default(), |fold, item| fold.push(&item));
+
+	let mut input = FileOrStdin::from(args.input_file);
+	let mut output = FileOrStdout::from(args.output_file);
+	let force = args.force;
 
 	match png::read(&mut input) {
 		Result::Ok(indata) => {
@@ -124,6 +124,102 @@ trait IteratorExt {
 impl <I: Sized + Iterator<Item=png::Chunk>> IteratorExt for I {
 	fn concat_idats(self) -> ConcatinateIdats<I> where Self:Sized + Iterator<Item=png::Chunk> { ConcatinateIdats::new(self) }
 }
+
+
+#[derive(Debug, Default)]
+struct Args {
+	force_positional:bool,
+
+	help:bool,
+	force:bool,
+
+	program_name:Option<String>,
+	input_file:Option<String>,
+	output_file:Option<String>,
+}
+
+impl Args {
+	fn push(mut self, arg:&str) -> Args {
+		if !self.force_positional && arg.chars().nth(0).unwrap_or('\0') == '-' {
+			if arg == "--" {
+				self.force_positional = true;
+			} else if arg == "-f" || arg == "--force" || arg == "/force" {
+				self.force = true;
+			} else if arg == "-?" || arg == "--help" || arg == "/help" {
+				self.help = true;
+			} else {
+				panic!(format!("Unknown flag: {}", arg));
+			}
+		} else {
+			if self.program_name == Option::None {
+				self.program_name = Option::Some(arg.to_string());
+			} else if self.input_file == Option::None {
+				self.input_file = Option::Some(arg.to_string());
+			} else if self.output_file == Option::None {
+				self.output_file = Option::Some(arg.to_string());
+			} else {
+				panic!("Too many positional arguments");
+			}
+		}
+		self
+	}
+}
+
+
+#[derive(Debug)]
+enum FileOrStdin {
+	File(::std::fs::File),
+	Stdin(::std::io::Stdin),
+}
+
+impl From<Option<String>> for FileOrStdin {
+	fn from(src:Option<String>) -> FileOrStdin {
+		match src {
+			None => FileOrStdin::Stdin(::std::io::stdin()),
+			Some(s) => 	FileOrStdin::File(::std::fs::OpenOptions::new().read(true).open(s).expect("Could not open input file")),
+		}
+	}
+}
+
+impl ::std::io::Read for FileOrStdin {
+	fn read(&mut self, buf: &mut [u8]) -> ::std::io::Result<usize> {
+		match self {
+			FileOrStdin::File(x) => x.read(buf),
+			FileOrStdin::Stdin(x) => x.read(buf),
+		}
+	}
+}
+
+#[derive(Debug)]
+enum FileOrStdout {
+	File(::std::fs::File),
+	Stdout(::std::io::Stdout),
+}
+
+impl From<Option<String>> for FileOrStdout {
+	fn from(src:Option<String>) -> FileOrStdout {
+		match src {
+			None => FileOrStdout::Stdout(::std::io::stdout()),
+			Some(s) => 	FileOrStdout::File(::std::fs::OpenOptions::new().write(true).create(true).open(s).expect("Could not open output file")),
+		}
+	}
+}
+
+impl ::std::io::Write for FileOrStdout {
+	fn write(&mut self, buf: &[u8]) -> ::std::io::Result<usize> {
+		match self {
+			FileOrStdout::File(x) => x.write(buf),
+			FileOrStdout::Stdout(x) => x.write(buf),
+		}
+	}
+	fn flush(&mut self) -> ::std::io::Result<()> {
+		match self {
+			FileOrStdout::File(x) => x.flush(),
+			FileOrStdout::Stdout(x) => x.flush(),
+		}
+	}
+}
+
 
 #[cfg(test)]
 mod tests {

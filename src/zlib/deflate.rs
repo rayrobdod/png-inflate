@@ -149,6 +149,7 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 						for _ in 0..length {
 							let index_to_copy = retval.len() - usize::from(distance);
 							let value_to_copy = retval.get(index_to_copy).unwrap().clone();
+							//eprintln!("\t\t{:x}, ({})", value_to_copy, index_to_copy);
 							retval.push(value_to_copy);
 						}
 					}

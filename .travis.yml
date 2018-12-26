@@ -11,6 +11,14 @@ rust:
   - nightly
   - beta
   - stable
+matrix:
+  allow_failures:
+    - rust: nightly
+install:
+  - pushd target
+  - bash <(curl -s https://raw.githubusercontent.com/PowerShell/PowerShell/master/tools/install-powershell.sh)
+  - popd
 script:
   - cargo build $MODE
   - cargo test $MODE
+  - pwsh -File test/pngsuite.ps1

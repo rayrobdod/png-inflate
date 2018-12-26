@@ -124,7 +124,11 @@ impl ::std::fmt::Display for ReadError {
 			ReadError::Io(x) => write!(f, "{}", x),
 			ReadError::InvalidTyp(x) => write!(f, "Illegal chunk type: {:?}", x),
 			ReadError::CrcMismatch{stated, calculated} => write!(f, "CRC mismatch: file {:x}; calculated {:x}", stated, calculated),
-			ReadError::MagicMismatch(x) => write!(f, "Magic didn't match expected: {:?}", x),
+			ReadError::MagicMismatch(x) => {
+				let bytes = x;
+				let chars:String = x.iter().map(|x| char::from(*x)).map(|x| if x.is_ascii_graphic() {x} else {'.'}).collect();
+				write!(f, "Magic didn't match expected: {:?} | {:?}", bytes, chars)
+			},
 		}
 	}
 }
