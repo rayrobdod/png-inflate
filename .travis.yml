@@ -21,4 +21,5 @@ install:
 script:
   - cargo build $MODE
   - cargo test $MODE
-  - pwsh -File test/pngsuite.ps1
+  - pwsh -File test/setup.ps1
+  - pwsh -File test/idempotent.ps1

@@ -1,4 +1,5 @@
-*.rs	text	diff=rust
 *.md	text	diff=markdown
-*.yml	text	diff=yaml
 *.png	binary	diff=png	-filter
+*.ps1	text	diff=powershell
+*.rs	text	diff=rust
+*.yml	text	diff=yaml
