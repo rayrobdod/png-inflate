@@ -10,13 +10,18 @@ use ::std::result::Result;
 fn main() {
 	let args = ::std::env::args().fold(Args::default(), |fold, item| fold.push(&item));
 
+	if args.help {
+		Args::print_usage(& args.program_name.unwrap_or("".to_string()));
+		::std::process::exit(0);
+	}
+
 	let mut input = FileOrStdin::from(args.input_file);
 	let mut output = FileOrStdout::from(args.output_file);
-	let force = args.force;
+	let ignore_unsafe_to_copy = args.ignore_unsafe_to_copy;
 
 	match png::read(&mut input) {
 		Result::Ok(indata) => {
-			let outdata:Result<Vec<png::Chunk>, Error> = indata.iter().cloned().concat_idats().map(|x| deflate_chunks(x, force)).collect();
+			let outdata:Result<Vec<png::Chunk>, Error> = indata.iter().cloned().concat_idats().map(|x| deflate_chunks(x, ignore_unsafe_to_copy)).collect();
 
 			match outdata {
 				Result::Ok(outdata) => {
@@ -126,12 +131,13 @@ impl <I: Sized + Iterator<Item=png::Chunk>> IteratorExt for I {
 }
 
 
+
 #[derive(Debug, Default)]
 struct Args {
 	force_positional:bool,
 
 	help:bool,
-	force:bool,
+	ignore_unsafe_to_copy:bool,
 
 	program_name:Option<String>,
 	input_file:Option<String>,
@@ -139,13 +145,25 @@ struct Args {
 }
 
 impl Args {
+	fn print_usage(program_name:&str) -> () {
+		println!("  {0} [OPTIONS] [--] infile.png [outfile.png]", program_name);
+		println!("  {0} [OPTIONS] < infile.png > outfile.png", program_name);
+		println!("  {0} --help|-?", program_name);
+		println!();
+		println!("Decompresses a png image's internal data structures");
+		println!();
+		println!("  {:3} {:20} {}", "", "--copy-unsafe", "continue even upon encounter of unknown not-safe-to-copy chunks");
+		println!("  {:3} {:20} {}", "-?,", "--help", "display this help message");
+	}
+
 	fn push(mut self, arg:&str) -> Args {
-		if !self.force_positional && arg.chars().nth(0).unwrap_or('\0') == '-' {
+		let arg_zeroth_char = arg.chars().nth(0).unwrap_or('\0');
+		if !self.force_positional && arg_zeroth_char == '-' {
 			if arg == "--" {
 				self.force_positional = true;
-			} else if arg == "-f" || arg == "--force" || arg == "/force" {
-				self.force = true;
-			} else if arg == "-?" || arg == "--help" || arg == "/help" {
+			} else if arg == "--copy-unsafe" || arg == "/copy-unsafe" {
+				self.ignore_unsafe_to_copy = true;
+			} else if arg == "-?" || arg == "--help" || arg == "/?" || arg == "/help" {
 				self.help = true;
 			} else {
 				panic!(format!("Unknown flag: {}", arg));
