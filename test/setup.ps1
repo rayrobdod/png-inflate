@@ -1,4 +1,4 @@
-#!pwsh
+#!pwsh -File
 <# Downloads sample PNG files and sorts them by validity #>
 
 $PNGSUITE_WEB='http://www.schaik.com/pngsuite2011/PngSuite-2017jul19.zip'

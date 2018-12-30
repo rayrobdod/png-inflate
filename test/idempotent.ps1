@@ -1,4 +1,4 @@
-#!pwsh
+#!pwsh -File
 <# For each valid test case, asserts that the dut is idempotent #>
 
 $MODE_STRING=if ($env:MODE -eq '--release') {'release'} else {'debug'}
@@ -40,10 +40,7 @@ ForEach ($file in (dir $INPUTS)) {
 	Remove-Item $out2 -Force
 
 	$results += $test
-}
-
-ForEach ($result in $results) {
-	Echo $('test ' + $result.Input.Name + ' ... ' + $result.Result)
+	Echo $('test ' + $test.Input.Name + ' ... ' + $test.Result)
 }
 
 Echo ''

@@ -8,6 +8,7 @@ environment:
   - TARGET: x86_64-pc-windows-gnu
   - TARGET: i686-pc-windows-gnu
 install:
+- cmd: 'C:\cygwin64\setup-x86_64.exe --no-admin -q -P sng'
   #(New-Object Net.WebClient).DownloadFile('https://win.rustup.rs/', 'rustup-init.exe')
 - cmd: 'appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe'
 - cmd: 'rustup-init -y --default-toolchain %CHANNEL% --default-host %TARGET%'
@@ -17,7 +18,9 @@ build_script:
 - cmd: '7z a target\release\png_inflate.exe.gz target\release\png_inflate.exe'
 test_script:
 - cmd: 'cargo test %MODE%'
+- ps: '$SNG = "C:\cygwin64\bin\sng.exe"'
 - ps: './test/setup.ps1'
 - ps: './test/idempotent.ps1'
+- ps: './test/semantics.ps1'
 artifacts:
 - path: target\release\png_inflate.exe.gz

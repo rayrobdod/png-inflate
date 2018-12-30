@@ -14,12 +14,23 @@ rust:
 matrix:
   allow_failures:
     - rust: nightly
+addons:
+  apt:
+    packages:
+      - sng
+  homebrew:
+    update: true
+    packages:
+      - sng
 install:
   - pushd target
   - bash <(curl -s https://raw.githubusercontent.com/PowerShell/PowerShell/master/tools/install-powershell.sh)
   - popd
+before_script:
+  - sng -V
 script:
   - cargo build $MODE
   - cargo test $MODE
   - pwsh -File test/setup.ps1
   - pwsh -File test/idempotent.ps1
+  - pwsh -File test/semantics.ps1
