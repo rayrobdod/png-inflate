@@ -49,6 +49,7 @@ fn main() {
 #[derive(Debug)]
 pub enum Error{
 	CannotCopySafely,
+	UnsupportedCompressionMethod,
 	ZlibError(zlib::InflateError),
 }
 
@@ -59,24 +60,70 @@ impl From<zlib::InflateError> for Error {
 
 fn deflate_chunks(indata:png::Chunk, ignore_unsafe_to_copy:bool) -> Result<png::Chunk, Error> {
 	match indata.typ.as_ref() {
-		// Validate, but copy if fine
-		b"IHDR" => Ok(indata),
-		// decompress
+		// Not compressed, but contains data that can be validated
+		b"IHDR" => {
+			// byte 10 is the Compression Method; everything about this program assumes
+			// that the only valid compression method is zero
+			if indata.data[10] == 0 {
+				Ok(indata)
+			} else {
+				Err(Error::UnsupportedCompressionMethod)
+			}
+		},
+		// Contains only compressed data
 		b"IDAT" => {
 			Ok(png::Chunk{
 				typ : *b"IDAT",
 				data : zlib::deflate_immediate(&zlib::inflate(&indata.data)?),
 			})
 		},
-		b"zTXt" => Ok(indata),
-		b"iTXt" => Ok(indata),
-		b"iCCP" => Ok(indata),
-		// known can copy
+		// Contains a cstring, followed by a method flag, followed by compressed data
+		b"zTXt" | b"iCCP" => {
+			let mut iter = indata.data.iter().cloned();
+			let keyword:Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
+			let method = iter.next();
+			if Some(0) == method {
+				let value:Vec<u8> = iter.collect();
+				let value = zlib::deflate_immediate(&zlib::inflate(&value)?);
+				let newdata = keyword.iter().chain([0, 0].iter()).chain(value.iter()).cloned().collect();
+				Ok(png::Chunk{ typ : indata.typ, data : newdata, })
+			} else {
+				Err(Error::UnsupportedCompressionMethod)
+			}
+		},
+		// Contains a: cstring, byte flag, byte flag, cstring, cstring, compressed data
+		b"iTXt" => {
+			let mut iter = indata.data.iter().cloned();
+			let keyword:Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
+			let is_compressed = iter.next();
+			if Some(0) == is_compressed {
+				// Not compressed, so make no changes
+				let newdata:Vec<u8> = keyword.iter().cloned().chain(std::iter::repeat(0).take(2)).chain(iter).collect();
+				Ok(png::Chunk{ typ : indata.typ, data : newdata, })
+			} else {
+				let method = iter.next();
+				if Some(0) == method {
+					let language:Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
+					let translated_keyword:Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
+					let value:Vec<u8> = iter.collect();
+					let value = zlib::deflate_immediate(&zlib::inflate(&value)?);
+
+					let newdata:Vec<u8> = keyword.iter().cloned().chain([0, 1, 0].iter().cloned())
+							.chain(language.iter().cloned()).chain(std::iter::once(0))
+							.chain(translated_keyword.iter().cloned()).chain(std::iter::once(0))
+							.chain(value.iter().cloned()).collect();
+					Ok(png::Chunk{ typ : indata.typ, data : newdata, })
+				} else {
+					Err(Error::UnsupportedCompressionMethod)
+				}
+			}
+		},
+		// Contain no compression, and are not affected by compression details of other chunks
 		b"PLTE" | b"IEND" | b"tRNS" | b"cHRM" | b"gAMA" |
 		b"sBIT" | b"sRGB" | b"tEXt" | b"bKGD" | b"hIST" |
-		b"pHYs" | b"sPLT" | b"tIME" => Ok(indata),
-		// check safe to copy bit or loose override,
-		// then either copy or error
+		b"pHYs" | b"sPLT" | b"tIME" | b"oFFs" | b"pCAL" |
+		b"sCAL" | b"gIFg" | b"gIFx" | b"gIFg" | b"eXIf" => Ok(indata),
+		// unknown chunks
 		_ => {
 			if ignore_unsafe_to_copy || indata.safe_to_copy() {
 				Ok(indata)
