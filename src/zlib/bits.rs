@@ -1,8 +1,9 @@
-
+///! Contains an iterator transformer that transforms a iterator<u8> iterator over the bits of that stream
 use super::u4;
 use super::u4ZeroToRangeIter;
 
-/// An iterator transformer that splits each u8 into its component bits
+/// An iterator transformer that splits each u8 into its component bits,
+/// reading the bytes in LSB order
 pub struct Bits <I: Iterator<Item=u8>> {
 	/// the source of bytes
 	backing:I,
@@ -38,7 +39,8 @@ impl <I: Iterator<Item=u8>> Bits<I> {
 		current_byte_read_bits : u8::max_value(),
 	}}
 
-	/// reads n bits from this Iterator, packing the result into a single u16
+	/// reads n bits from this Iterator, packing the result into a single u16,
+	/// such that the first bit read becomes the MSB of the returned value
 	pub fn read_n(&mut self, bit_count:u4) -> Option<u16> {
 		let mut retval:u16 = 0;
 		for _ in u4ZeroToRangeIter::new(bit_count) {
@@ -51,6 +53,8 @@ impl <I: Iterator<Item=u8>> Bits<I> {
 		Some(retval)
 	}
 
+	/// reads n bits from this Iterator, packing the result into a single u16
+	/// in the reverse order of `read_n`
 	pub fn read_n_rev(&mut self, bit_count:u4) -> Option<u16> {
 		let mut retval:u16 = 0;
 		for i in u4ZeroToRangeIter::new(bit_count) {

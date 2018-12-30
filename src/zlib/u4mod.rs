@@ -104,6 +104,7 @@ impl ::std::ops::Sub for u4 {
 	}
 }
 
+/// An iterator over u4s that begins at 0, and ends (exclusive) of a given value
 pub struct ZeroToRangeIter {
 	current:u4,
 	end:u4,

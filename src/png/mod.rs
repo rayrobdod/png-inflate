@@ -7,10 +7,10 @@ use ::std::result::Result;
 use ::std::vec::Vec;
 
 /// The PNG magic header
-pub const MAGIC:[u8;8] = [137, 80, 78, 71, 13, 10, 26, 10];
+const MAGIC:[u8;8] = [137, 80, 78, 71, 13, 10, 26, 10];
 
 
-/// Reads a png file
+/// Reads a png file, and returns the chunks contained in that file
 pub fn read(file:&mut Read) -> Result<Vec<Chunk>, ReadError> {
 	let mut magic:[u8;8] = [0,0,0,0,0,0,0,0];
 	file.read_exact(&mut magic).map_err(|x| ReadError::Io(x)).and_then(|_| {
@@ -38,6 +38,7 @@ pub fn read(file:&mut Read) -> Result<Vec<Chunk>, ReadError> {
 	})
 }
 
+/// Writes a sequence of Chunks to form a png file
 pub fn write(file:&mut Write, chunks:Vec<Chunk>) -> Result<(), ::std::io::Error> {
 	file.write_all(&MAGIC)?;
 	for chunk in chunks {
@@ -47,7 +48,7 @@ pub fn write(file:&mut Write, chunks:Vec<Chunk>) -> Result<(), ::std::io::Error>
 }
 
 
-/// Represents a PNG chunk
+/// Represents a PNG data chunk
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Chunk {
 	pub typ:[u8;4],
@@ -56,7 +57,7 @@ pub struct Chunk {
 
 impl Chunk {
 	/// Reads a PNG chunk from a data stream
-	pub fn read(file:&mut Read) -> Result<Chunk, ChunkReadError> {
+	fn read(file:&mut Read) -> Result<Chunk, ChunkReadError> {
 		let mut size:[u8;4] = [0,0,0,0];
 		file.read_exact(&mut size).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
 			let size = u32_from_be_bytes(size);
@@ -90,7 +91,7 @@ impl Chunk {
 	}
 
 	/// Writes a PNG chunk to a data stream
-	pub fn write(self, file:&mut Write) -> Result<(), ::std::io::Error> {
+	fn write(self, file:&mut Write) -> Result<(), ::std::io::Error> {
 		file.write_all(&u32_to_be_bytes(self.data.len() as u32))?;
 		file.write_all(&self.typ)?;
 		file.write_all(&self.data)?;

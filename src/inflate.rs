@@ -1,6 +1,4 @@
 ///! A program that takes a png file and deflates the compressed chunks
-///!
-///! Reads stdin; writes to stdout
 
 mod png;
 mod zlib;

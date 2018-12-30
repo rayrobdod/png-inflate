@@ -1,3 +1,4 @@
+///! "DEFLATE Compressed Data Format Specification" <http://www.w3.org/Graphics/PNG/RFC-1951>
 use super::u4;
 use super::Bits;
 

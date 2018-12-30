@@ -1,6 +1,4 @@
-#![allow(dead_code)]
 ///! "ZLIB Compressed Data Format Specification" <https://www.ietf.org/rfc/rfc1950.txt>
-///! "DEFLATE Compressed Data Format Specification" <http://www.w3.org/Graphics/PNG/RFC-1951>
 
 mod u4mod;
 pub use self::u4mod::u4;
@@ -11,7 +9,7 @@ mod deflate;
 
 /// A u2 representing a hint indicating the algorithm used when compressing
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum CompressionLevel {
+enum CompressionLevel {
 	Fastest, Fast, Slow, Slowest
 }
 
@@ -45,11 +43,12 @@ impl Header {
 		Header{window_size_exponent:window_size_exponent, compression_level:compression_level}
 	}
 
+	#[allow(dead_code)]
 	fn window_size(&self) -> u32 {
 		1 << (8 + u8::from(self.window_size_exponent))
 	}
 
-	pub fn read(val:u16) -> Result<Header, InflateError> {
+	fn read(val:u16) -> Result<Header, InflateError> {
 		if (val % 31) != 0 {
 			Err(InflateError::CheckMismatchHeader)
 		} else {
@@ -78,7 +77,7 @@ impl Header {
 		}
 	}
 
-	pub fn write(&self) -> u16 {
+	fn write(&self) -> u16 {
 		let b1 = u4::concat(self.window_size_exponent, u4::_8);
 		let b2 = u8::from(self.compression_level);
 		let retval = (u16::from(b1) << 8) | u16::from(b2);
