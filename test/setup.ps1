@@ -9,12 +9,12 @@ $TARGET=$PWD.Path + '/.test_cases/'
 $TARGET_VALID=$TARGET + '/valid/'
 $TARGET_INVALID=$TARGET + '/invalid/'
 
-if (-Not $(Test-Path $TARGET)) { mkdir $TARGET }
-if (-Not $(Test-Path $TARGET_VALID)) { mkdir $TARGET_VALID }
-if (-Not $(Test-Path $TARGET_INVALID)) { mkdir $TARGET_INVALID }
+if (-Not $(Test-Path $TARGET)) { mkdir $TARGET | Out-Null }
+if (-Not $(Test-Path $TARGET_VALID)) { mkdir $TARGET_VALID | Out-Null }
+if (-Not $(Test-Path $TARGET_INVALID)) { mkdir $TARGET_INVALID | Out-Null }
 
 if (-Not $(Test-Path $PNGSUITE_EXPLODE)) {
-	mkdir $PNGSUITE_EXPLODE
+	mkdir $PNGSUITE_EXPLODE | Out-Null
 	(New-Object Net.WebClient).DownloadFile($PNGSUITE_WEB, $PNGSUITE_LOCAL)
 	Expand-Archive -Path $PNGSUITE_LOCAL -DestinationPath $PNGSUITE_EXPLODE
 	Remove-Item $PNGSUITE_LOCAL -Force
