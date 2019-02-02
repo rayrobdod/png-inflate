@@ -1,8 +1,11 @@
 ///! A program that takes a png file and deflates the compressed chunks
 
+mod file_or_stdio;
 mod png;
 mod zlib;
 
+use ::file_or_stdio::FileOrStdin;
+use ::file_or_stdio::FileOrStdout;
 use ::std::result::Result;
 
 fn main() {
@@ -47,7 +50,7 @@ fn main() {
 }
 
 #[derive(Debug)]
-pub enum Error{
+enum Error{
 	CannotCopySafely,
 	UnsupportedCompressionMethod,
 	ZlibError(zlib::InflateError),
@@ -176,7 +179,7 @@ impl <I: Sized + Iterator<Item=png::Chunk>> IteratorExt for I {
 }
 
 
-
+/// A representation of the program arguments
 #[derive(Debug, Default)]
 struct Args {
 	force_positional:bool,
@@ -190,7 +193,9 @@ struct Args {
 }
 
 impl Args {
+	/// Print to stdout a usage statement for a program with this set of arguments
 	fn print_usage(program_name:&str) -> () {
+		// hardcoded, but kept close to the rest of the argument data so that hopefully
 		println!("  {0} [OPTIONS] [--] infile.png [outfile.png]", program_name);
 		println!("  {0} [OPTIONS] < infile.png > outfile.png", program_name);
 		println!("  {0} --help|-?", program_name);
@@ -201,6 +206,8 @@ impl Args {
 		println!("  {:3} {:20} {}", "-?,", "--help", "display this help message");
 	}
 
+	/// Decode arg, add the result to self, then return self.
+	/// Intended as the lambda in a Iter::fold invocation.
 	fn push(mut self, arg:&str) -> Args {
 		let arg_zeroth_char = arg.chars().nth(0).unwrap_or('\0');
 		if !self.force_positional && arg_zeroth_char == '-' {
@@ -225,61 +232,6 @@ impl Args {
 			}
 		}
 		self
-	}
-}
-
-
-#[derive(Debug)]
-enum FileOrStdin {
-	File(::std::fs::File),
-	Stdin(::std::io::Stdin),
-}
-
-impl From<Option<String>> for FileOrStdin {
-	fn from(src:Option<String>) -> FileOrStdin {
-		match src {
-			None => FileOrStdin::Stdin(::std::io::stdin()),
-			Some(s) => 	FileOrStdin::File(::std::fs::OpenOptions::new().read(true).open(s).expect("Could not open input file")),
-		}
-	}
-}
-
-impl ::std::io::Read for FileOrStdin {
-	fn read(&mut self, buf: &mut [u8]) -> ::std::io::Result<usize> {
-		match self {
-			FileOrStdin::File(x) => x.read(buf),
-			FileOrStdin::Stdin(x) => x.read(buf),
-		}
-	}
-}
-
-#[derive(Debug)]
-enum FileOrStdout {
-	File(::std::fs::File),
-	Stdout(::std::io::Stdout),
-}
-
-impl From<Option<String>> for FileOrStdout {
-	fn from(src:Option<String>) -> FileOrStdout {
-		match src {
-			None => FileOrStdout::Stdout(::std::io::stdout()),
-			Some(s) => 	FileOrStdout::File(::std::fs::OpenOptions::new().write(true).create(true).open(s).expect("Could not open output file")),
-		}
-	}
-}
-
-impl ::std::io::Write for FileOrStdout {
-	fn write(&mut self, buf: &[u8]) -> ::std::io::Result<usize> {
-		match self {
-			FileOrStdout::File(x) => x.write(buf),
-			FileOrStdout::Stdout(x) => x.write(buf),
-		}
-	}
-	fn flush(&mut self) -> ::std::io::Result<()> {
-		match self {
-			FileOrStdout::File(x) => x.flush(),
-			FileOrStdout::Stdout(x) => x.flush(),
-		}
 	}
 }
 
