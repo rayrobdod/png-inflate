@@ -4,23 +4,47 @@ environment:
   MODE: --release
   matrix:
   - TARGET: x86_64-pc-windows-msvc
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
   - TARGET: i686-pc-windows-msvc
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
   - TARGET: x86_64-pc-windows-gnu
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
   - TARGET: i686-pc-windows-gnu
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+  - TARGET: x86_64-unknown-linux-gnu
+    APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
 install:
 - cmd: 'C:\cygwin64\setup-x86_64.exe --no-admin -q -P sng'
-  #(New-Object Net.WebClient).DownloadFile('https://win.rustup.rs/', 'rustup-init.exe')
-- cmd: 'appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe'
-- cmd: 'rustup-init -y --default-toolchain %CHANNEL% --default-host %TARGET%'
-- cmd: 'set PATH=%PATH%;%USERPROFILE%\.cargo\bin'
+- sh: 'sudo apt-get -yq install sng'
+- ps: '$SNG = if ($isLinux) {"/usr/bin/sng"} else {"C:\cygwin64\bin\sng.exe"}'
+- ps: '& $SNG -V'
+
+- cmd: |
+    appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
+    rustup-init -y --default-toolchain %CHANNEL% --default-host %TARGET%
+    set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+- sh: |
+    curl https://sh.rustup.rs -sSf >rustup.sh
+    chmod +x rustup.sh
+    ./rustup.sh -y --default-toolchain $CHANNEL --default-host $TARGET
+    source $HOME/.cargo/env
+- ps: '& cargo -V'
+
 build_script:
 - cmd: 'cargo build %MODE%'
+- sh: 'cargo build $MODE'
+
 - cmd: '7z a target\release\png_inflate.exe.gz target\release\png_inflate.exe'
+- sh: 'gzip -c target/release/png_inflate --keep > target/release/png_inflate.gz'
+
 test_script:
 - cmd: 'cargo test %MODE%'
-- ps: '$SNG = "C:\cygwin64\bin\sng.exe"'
+- sh: 'cargo test $MODE'
+
 - ps: './test/setup.ps1'
 - ps: './test/idempotent.ps1'
 - ps: './test/semantics.ps1'
+
 artifacts:
 - path: target\release\png_inflate.exe.gz
+- path: target\release\png_inflate.gz
