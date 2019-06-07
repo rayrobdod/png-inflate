@@ -62,8 +62,8 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 		match typ {
 			0 => { // no compression
 				let mut bytes = bitreader.discard_til_byte_boundary();
-				let len = u16_from_le_bytes(option_to_result(bytes.next())?, option_to_result(bytes.next())?);
-				let nlen = u16_from_le_bytes(option_to_result(bytes.next())?, option_to_result(bytes.next())?);
+				let len = u16::from_le_bytes([option_to_result(bytes.next())?, option_to_result(bytes.next())?]);
+				let nlen = u16::from_le_bytes([option_to_result(bytes.next())?, option_to_result(bytes.next())?]);
 				if len != !nlen {
 					return Err(InflateError::NonCompressedLengthInvalid);
 				}
@@ -178,8 +178,8 @@ pub fn deflate_immediate<I: Iterator<Item=u8>>(input:I) -> Vec<u8> {
 	let mut retval:Vec<u8> = Vec::new();
 	for (chunk, is_last) in input {
 		retval.push(u8::from(is_last));
-		retval.extend(u16_to_le_bytes(chunk.len() as u16).iter());
-		retval.extend(u16_to_le_bytes(!(chunk.len() as u16)).iter());
+		retval.extend((chunk.len() as u16).to_le_bytes().iter());
+		retval.extend((!(chunk.len() as u16)).to_le_bytes().iter());
 		retval.extend(chunk.iter());
 	}
 	retval
@@ -290,16 +290,6 @@ fn act_upon_meta_code<I: Iterator<Item=u8>>(results:&mut Vec<u4>, bitreader:&mut
 		panic!("Illegal meta code: {}", code);
 	}
 	Ok(())
-}
-
-/// "u16::from_le_bytes is an experimental API"
-fn u16_from_le_bytes(a:u8, b:u8) -> u16 {
-	u16::from(a) | (u16::from(b) << 8)
-}
-
-/// "u16::to_le_bytes is an experimental API"
-fn u16_to_le_bytes(a:u16) -> [u8; 2] {
-	[(a & 0xFF) as u8, ((a >> 8) & 0xFF) as u8]
 }
 
 /// "u16::reverse_bits is an experimental API"

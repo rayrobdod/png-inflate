@@ -3,3 +3,5 @@
 *.ps1	text	diff=powershell
 *.rs	text	diff=rust
 *.yml	text	diff=yaml
+*.toml	text	diff=toml
+Cargo.lock	text	diff=toml
