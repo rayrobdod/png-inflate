@@ -61,7 +61,7 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 		let typ:u16 = option_to_result(bitreader.read_n_rev(u4::_2))?;
 		match typ {
 			0 => { // no compression
-				let mut bytes = bitreader.discard_til_byte_boundary();
+				let bytes = bitreader.discard_til_byte_boundary();
 				let len = u16::from_le_bytes([option_to_result(bytes.next())?, option_to_result(bytes.next())?]);
 				let nlen = u16::from_le_bytes([option_to_result(bytes.next())?, option_to_result(bytes.next())?]);
 				if len != !nlen {

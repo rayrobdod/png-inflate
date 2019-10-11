@@ -136,7 +136,7 @@ fn deflate_chunks(indata:png::Chunk, ignore_unsafe_to_copy:bool) -> Result<png::
 		b"PLTE" | b"IEND" | b"tRNS" | b"cHRM" | b"gAMA" |
 		b"sBIT" | b"sRGB" | b"tEXt" | b"bKGD" | b"hIST" |
 		b"pHYs" | b"sPLT" | b"tIME" | b"oFFs" | b"pCAL" |
-		b"sCAL" | b"gIFg" | b"gIFx" | b"gIFg" | b"eXIf" => Ok(indata),
+		b"sCAL" | b"gIFg" | b"gIFx" | b"gIFt" | b"eXIf" => Ok(indata),
 		// unknown chunks
 		_ => {
 			if ignore_unsafe_to_copy || indata.safe_to_copy() {
