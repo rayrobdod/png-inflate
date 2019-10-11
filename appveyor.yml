@@ -41,6 +41,8 @@ test_script:
 - cmd: 'cargo test %MODE%'
 - sh: 'cargo test $MODE'
 
+- ps: './target/release/png_inflate --version'
+
 - ps: './test/setup.ps1'
 - ps: './test/idempotent.ps1'
 - ps: './test/semantics.ps1'

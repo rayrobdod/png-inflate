@@ -8,11 +8,22 @@ use ::file_or_stdio::FileOrStdin;
 use ::file_or_stdio::FileOrStdout;
 use ::std::result::Result;
 
+const PROGRAM_NAME:&'static str = env!("CARGO_PKG_NAME");
+const PROGRAM_VERSION:&'static str = env!("CARGO_PKG_VERSION");
+const PROGRAM_HOMEPAGE:&'static str = env!("CARGO_PKG_HOMEPAGE");
+const PROGRAM_DESCRIPTION:&'static str = env!("CARGO_PKG_DESCRIPTION");
+
 fn main() {
 	let args = ::std::env::args().fold(Args::default(), |fold, item| fold.push(&item));
 
 	if args.help {
 		Args::print_usage(& args.program_name.unwrap_or("".to_string()));
+		::std::process::exit(0);
+	}
+
+	if args.version {
+		println!("{} {}", PROGRAM_NAME, PROGRAM_VERSION);
+		println!("{}", PROGRAM_HOMEPAGE);
 		::std::process::exit(0);
 	}
 
@@ -185,6 +196,7 @@ struct Args {
 	force_positional:bool,
 
 	help:bool,
+	version:bool,
 	ignore_unsafe_to_copy:bool,
 
 	program_name:Option<String>,
@@ -196,14 +208,16 @@ impl Args {
 	/// Print to stdout a usage statement for a program with this set of arguments
 	fn print_usage(program_name:&str) -> () {
 		// hardcoded, but kept close to the rest of the argument data so that hopefully
+		// we remember to change this when the argument data is changed
 		println!("  {0} [OPTIONS] [--] infile.png [outfile.png]", program_name);
 		println!("  {0} [OPTIONS] < infile.png > outfile.png", program_name);
-		println!("  {0} --help|-?", program_name);
+		println!("  {0} --help|-?|--version", program_name);
 		println!();
-		println!("Decompresses a png image's internal data structures");
+		println!("{}", PROGRAM_DESCRIPTION);
 		println!();
 		println!("  {:3} {:20} {}", "", "--copy-unsafe", "continue even upon encounter of unknown not-safe-to-copy chunks");
 		println!("  {:3} {:20} {}", "-?,", "--help", "display this help message");
+		println!("  {:3} {:20} {}", "", "--version", "display program version");
 	}
 
 	/// Decode arg, add the result to self, then return self.
@@ -217,6 +231,8 @@ impl Args {
 				self.ignore_unsafe_to_copy = true;
 			} else if arg == "-?" || arg == "--help" || arg == "/?" || arg == "/help" {
 				self.help = true;
+			} else if arg == "--version" {
+				self.version = true;
 			} else {
 				panic!(format!("Unknown flag: {}", arg));
 			}

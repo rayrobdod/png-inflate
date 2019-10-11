@@ -1,9 +1,18 @@
 [package]
-name = "inflate_png"
-version = "0.1.0"
+name = "png_inflate"
+version = "0.0.0-SNAPSHOT"
 authors = [
     "Raymond Dodge <git@rayrobdod.name>"
 ]
+publish = false
+description = "A filter that decompresses a png image's internal data structures"
+repository = "https://github.com/rayrobdod/png-inflate"
+homepage = "https://rayrobdod.name/programming/programs/pngInflate/"
+license = "Apache-2.0"
+readme = "README.md"
+
+[profile.release]
+lto = true
 
 [[bin]]
 name = "png_inflate"
