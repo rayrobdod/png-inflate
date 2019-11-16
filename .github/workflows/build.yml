@@ -1,0 +1,43 @@
+name: Build
+on: [push]
+jobs:
+  ubuntu-debug:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build
+      run: cargo build --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: png_inflate-debug
+        path: target/debug/png_inflate
+  ubuntu-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build
+      run: cargo build --verbose --release
+    - uses: actions/upload-artifact@master
+      with:
+        name: png_inflate
+        path: target/release/png_inflate
+  windows-debug:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build
+      run: cargo build --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: png_inflate-debug.exe
+        path: target/debug/png_inflate.exe
+  windows-release:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build
+      run: cargo build --verbose --release
+    - uses: actions/upload-artifact@master
+      with:
+        name: png_inflate.exe
+        path: target/release/png_inflate.exe

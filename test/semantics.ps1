@@ -4,7 +4,7 @@
 $MODE_STRING=if ($env:MODE -eq '--release') {'release'} else {'debug'}
 $DUT=$PWD.Path + '/target/' + $MODE_STRING + '/png_inflate'
 $INPUTS=$PWD.Path + '/.test_cases/valid/'
-$SNG=if ($SNG -eq $null) {'sng'} else {$SNG}
+$SNG=if ($env:SNG -eq $null) { if ($SNG -eq $null) {'sng'} else {$SNG} } else {$env:SNG}
 
 $results = @();
 

@@ -1,0 +1,46 @@
+name: Integration Test
+on: [push]
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    env:
+      SNG: /usr/bin/sng
+    steps:
+    - name: Get Dependencies
+      run: 'sudo apt-get -yq install sng'
+    - uses: actions/checkout@v1
+    - name: Build
+      run: 'cargo build --verbose'
+    - name: Print Version
+      run: '$GITHUB_WORKSPACE/target/debug/png_inflate --version'
+    - name: Setup Tests
+      run: 'pwsh -File $GITHUB_WORKSPACE/test/setup.ps1'
+    - name: Run tests A
+      run: 'pwsh -File $GITHUB_WORKSPACE/test/idempotent.ps1'
+    - name: Run tests B
+      run: 'pwsh -File $GITHUB_WORKSPACE/test/semantics.ps1'
+  windows:
+    runs-on: windows-latest
+    env:
+      SNG: C:\tools\cygwin\bin\sng.exe
+    steps:
+    - name: Get Dependencies
+      shell: pwsh
+      run: |
+        & choco install Cygwin
+        & C:\tools\cygwin\cygwinsetup.exe --no-admin -q -P sng
+    - uses: actions/checkout@v1
+    - name: Build
+      run: 'cargo build --verbose'
+    - name: Print Version
+      shell: pwsh
+      run: '& $env:GITHUB_WORKSPACE\target\debug\png_inflate --version'
+    - name: Setup Tests
+      shell: pwsh
+      run: 'pwsh -File $env:GITHUB_WORKSPACE\test\setup.ps1'
+    - name: Run tests A
+      shell: pwsh
+      run: 'pwsh -File $env:GITHUB_WORKSPACE\test\idempotent.ps1'
+    - name: Run tests B
+      shell: pwsh
+      run: 'pwsh -File $env:GITHUB_WORKSPACE\test\semantics.ps1'
