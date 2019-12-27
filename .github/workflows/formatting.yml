@@ -1,0 +1,13 @@
+name: Check Format
+on: [push]
+jobs:
+  generic:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get Dependencies
+      run: 'rustup toolchain install nightly ; rustup component add rustfmt --toolchain nightly'
+    - uses: actions/checkout@v1
+    - name: Check Rust Format
+      run: 'cargo +nightly fmt -- --check'
+    - name: Check Sorted
+      run: 'sort --check -- rustfmt.toml'

@@ -1,5 +1,4 @@
 ///! "ZLIB Compressed Data Format Specification" <https://www.ietf.org/rfc/rfc1950.txt>
-
 mod u4mod;
 pub use self::u4mod::u4;
 pub use self::u4mod::ZeroToRangeIter as u4ZeroToRangeIter;
@@ -10,7 +9,10 @@ mod deflate;
 /// A u2 representing a hint indicating the algorithm used when compressing
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum CompressionLevel {
-	Fastest, Fast, Slow, Slowest
+	Fastest,
+	Fast,
+	Slow,
+	Slowest,
 }
 
 impl From<CompressionLevel> for u8 {
@@ -28,19 +30,20 @@ impl From<CompressionLevel> for u8 {
 }
 
 
-
-
 /// Represents the zlib format header
 ///
 /// Assumes that the compression_method is 8 and that has_dictionary is false.
 struct Header {
 	window_size_exponent:u4,
-	compression_level:CompressionLevel
+	compression_level:CompressionLevel,
 }
 
 impl Header {
 	fn new(window_size_exponent:u4, compression_level:CompressionLevel) -> Header {
-		Header{window_size_exponent:window_size_exponent, compression_level:compression_level}
+		Header {
+			window_size_exponent:window_size_exponent,
+			compression_level:compression_level,
+		}
 	}
 
 	#[allow(dead_code)]
@@ -64,7 +67,7 @@ impl Header {
 				1 => CompressionLevel::Fast,
 				2 => CompressionLevel::Slow,
 				3 => CompressionLevel::Slowest,
-				_ => panic!("")
+				_ => panic!(""),
 			};
 
 			if method != u4::_8 {
@@ -92,7 +95,7 @@ impl Header {
 
 
 #[derive(Debug)]
-pub enum InflateError{
+pub enum InflateError {
 	UnexpectedEof,
 	CheckMismatchHeader,
 	UnsupportedHeader,
@@ -103,11 +106,15 @@ pub enum InflateError{
 }
 
 impl From<deflate::InflateError> for InflateError {
-	fn from(src: deflate::InflateError) -> InflateError { match src {
-		deflate::InflateError::UnexpectedEof => InflateError::UnexpectedEof,
-		deflate::InflateError::NonCompressedLengthInvalid => InflateError::DeflateNonCompressedLengthInvalid,
-		deflate::InflateError::InvalidBtype => InflateError::DeflateInvalidBtype,
-	}}
+	fn from(src:deflate::InflateError) -> InflateError {
+		match src {
+			deflate::InflateError::UnexpectedEof => InflateError::UnexpectedEof,
+			deflate::InflateError::NonCompressedLengthInvalid => {
+				InflateError::DeflateNonCompressedLengthInvalid
+			},
+			deflate::InflateError::InvalidBtype => InflateError::DeflateInvalidBtype,
+		}
+	}
 }
 
 //impl From<::std::option::NoneError> for InflateError {
@@ -121,9 +128,12 @@ fn option_to_result<A>(a:Option<A>) -> Result<A, InflateError> {
 }
 
 /// Decompresses a zlib stream
-pub fn inflate(r : &[u8]) -> Result<Vec<u8>, InflateError> {
+pub fn inflate(r:&[u8]) -> Result<Vec<u8>, InflateError> {
 	let mut r = r.iter().cloned();
-	let _header = Header::read(u16::from_be_bytes([option_to_result(r.next())?, option_to_result(r.next())?]))?;
+	let _header = Header::read(u16::from_be_bytes([
+		option_to_result(r.next())?,
+		option_to_result(r.next())?,
+	]))?;
 	let result = deflate::inflate(&mut r)?;
 	let given_chksum = u32::from_be_bytes([
 		option_to_result(r.next())?,
@@ -142,11 +152,15 @@ pub fn inflate(r : &[u8]) -> Result<Vec<u8>, InflateError> {
 }
 
 /// Store the the input in a zlib stream entirely using immediate mode
-pub fn deflate_immediate(r : &[u8]) -> Vec<u8> {
-	Header::new(u4::_7, CompressionLevel::Fastest).write().to_be_bytes().iter().cloned()
-			.chain(deflate::deflate_immediate(r.iter().cloned()))
-			.chain(adler32(r).to_be_bytes().iter().cloned())
-			.collect()
+pub fn deflate_immediate(r:&[u8]) -> Vec<u8> {
+	Header::new(u4::_7, CompressionLevel::Fastest)
+		.write()
+		.to_be_bytes()
+		.iter()
+		.cloned()
+		.chain(deflate::deflate_immediate(r.iter().cloned()))
+		.chain(adler32(r).to_be_bytes().iter().cloned())
+		.collect()
 }
 
 
@@ -167,27 +181,26 @@ fn adler32(input:&[u8]) -> u32 {
 }
 
 
-
 #[cfg(test)]
 mod tests {
 	mod header_write {
-		use super::super::Header;
 		use super::super::u4;
 		use super::super::CompressionLevel;
+		use super::super::Header;
 
 		#[test]
 		fn default() {
 			let exp:u16 = 0x6881;
 			let dut:Header = Header::new(u4::_6, CompressionLevel::Slow);
 			let res = dut.write();
-			assert!( exp == res, "{:x} != {:x}", exp, res );
+			assert!(exp == res, "{:x} != {:x}", exp, res);
 		}
 		#[test]
 		fn fastest() {
 			let exp:u16 = 0x7801;
 			let dut:Header = Header::new(u4::_7, CompressionLevel::Fastest);
 			let res = dut.write();
-			assert!( exp == res, "{:x} != {:x}", exp, res );
+			assert!(exp == res, "{:x} != {:x}", exp, res);
 		}
 	}
 	mod adler32 {

@@ -29,6 +29,8 @@ install:
     ./rustup.sh -y --default-toolchain $CHANNEL --default-host $TARGET
     source $HOME/.cargo/env
 - ps: '& cargo -V'
+- cmd: 'rustup -q toolchain install nightly'
+- sh: 'rustup -q toolchain install nightly'
 
 build_script:
 - cmd: 'cargo build %MODE%'
@@ -46,6 +48,14 @@ test_script:
 - ps: './test/setup.ps1'
 - ps: './test/idempotent.ps1'
 - ps: './test/semantics.ps1'
+
+- ps: 'cargo +nightly fmt -- --check'
+- ps: |
+    $a = Get-Content rustfmt.toml
+    $b = $($a | Sort-Object)
+    $acc = $True
+    ForEach ($idx in (0..($a.Length-1))) {$acc = $acc -and $a[$idx].Equals($b[$idx])}
+    if (-not $acc) {throw "Not Sorted"}
 
 artifacts:
 - path: target\release\png_inflate.exe.gz

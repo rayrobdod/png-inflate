@@ -1,0 +1,8 @@
+blank_lines_upper_bound = 2
+edition = "2018"
+hard_tabs = true
+match_block_trailing_comma = true
+overflow_delimited_expr = true
+space_after_colon = false
+space_before_colon = false
+type_punctuation_density = "Compressed"

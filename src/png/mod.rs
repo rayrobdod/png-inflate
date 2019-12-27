@@ -1,41 +1,42 @@
 ///! http://www.libpng.org/pub/png/
-
-use ::std::io::Read;
-use ::std::io::Write;
-use ::std::iter::Iterator;
-use ::std::result::Result;
-use ::std::vec::Vec;
+use std::io::Read;
+use std::io::Write;
+use std::iter::Iterator;
+use std::result::Result;
+use std::vec::Vec;
 
 /// The PNG magic header
-const MAGIC:[u8;8] = [137, 80, 78, 71, 13, 10, 26, 10];
+const MAGIC:[u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 
 
 /// Reads a png file, and returns the chunks contained in that file
 pub fn read(file:&mut dyn Read) -> Result<Vec<Chunk>, ReadError> {
-	let mut magic:[u8;8] = [0,0,0,0,0,0,0,0];
-	file.read_exact(&mut magic).map_err(|x| ReadError::Io(x)).and_then(|_| {
-		let magic = magic;
-		if magic == MAGIC {
-			let mut retval:Vec<Chunk> = Vec::new();
+	let mut magic:[u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
+	file.read_exact(&mut magic)
+		.map_err(|x| ReadError::Io(x))
+		.and_then(|_| {
+			let magic = magic;
+			if magic == MAGIC {
+				let mut retval:Vec<Chunk> = Vec::new();
 
-			loop {
-				match Chunk::read(file) {
-					Result::Ok(x) => {
-						let typ = &x.typ.clone();
-						retval.push(x);
-						if typ == b"IEND" {
-							break Ok(retval);
-						}
-					},
-					Result::Err(x) => {
-						break Err(ReadError::from(x));
-					},
+				loop {
+					match Chunk::read(file) {
+						Result::Ok(x) => {
+							let typ = &x.typ.clone();
+							retval.push(x);
+							if typ == b"IEND" {
+								break Ok(retval);
+							}
+						},
+						Result::Err(x) => {
+							break Err(ReadError::from(x));
+						},
+					}
 				}
+			} else {
+				Err(ReadError::MagicMismatch(magic))
 			}
-		} else {
-			Err(ReadError::MagicMismatch(magic))
-		}
-	})
+		})
 }
 
 /// Writes a sequence of Chunks to form a png file
@@ -51,43 +52,58 @@ pub fn write(file:&mut dyn Write, chunks:Vec<Chunk>) -> Result<(), ::std::io::Er
 /// Represents a PNG data chunk
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Chunk {
-	pub typ:[u8;4],
-	pub data:Vec<u8>
+	pub typ:[u8; 4],
+	pub data:Vec<u8>,
 }
 
 impl Chunk {
 	/// Reads a PNG chunk from a data stream
 	fn read(file:&mut dyn Read) -> Result<Chunk, ChunkReadError> {
-		let mut size:[u8;4] = [0,0,0,0];
-		file.read_exact(&mut size).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
-			let size = u32::from_be_bytes(size);
+		let mut size:[u8; 4] = [0, 0, 0, 0];
+		file.read_exact(&mut size)
+			.map_err(|x| ChunkReadError::Io(x))
+			.and_then(|_| {
+				let size = u32::from_be_bytes(size);
 
-			let mut typ:[u8;4] = [0,0,0,0];
-			file.read_exact(&mut typ).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
-				let typ = typ;
+				let mut typ:[u8; 4] = [0, 0, 0, 0];
+				file.read_exact(&mut typ)
+					.map_err(|x| ChunkReadError::Io(x))
+					.and_then(|_| {
+						let typ = typ;
 
-				if ! typ.iter().all(|c| (0x41 <= *c && *c <= 0x5A) || (0x61 <= *c && *c <= 0x7A)) {
-					Err(ChunkReadError::InvalidTyp(typ))
-				} else {
-					let mut data:Vec<u8> = vec![0; u32_to_usize(size)];
-					file.read_exact(&mut data).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
-						let data = data;
+						if !typ
+							.iter()
+							.all(|c| (0x41 <= *c && *c <= 0x5A) || (0x61 <= *c && *c <= 0x7A))
+						{
+							Err(ChunkReadError::InvalidTyp(typ))
+						} else {
+							let mut data:Vec<u8> = vec![0; u32_to_usize(size)];
+							file.read_exact(&mut data)
+								.map_err(|x| ChunkReadError::Io(x))
+								.and_then(|_| {
+									let data = data;
 
-						let mut stated_crc:[u8;4] = [0; 4];
-						file.read_exact(&mut stated_crc).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
-							let stated_crc = u32::from_be_bytes(stated_crc);
-							let cacluated_crc = calculate_crc(typ.iter().chain(data.iter()));
+									let mut stated_crc:[u8; 4] = [0; 4];
+									file.read_exact(&mut stated_crc)
+										.map_err(|x| ChunkReadError::Io(x))
+										.and_then(|_| {
+											let stated_crc = u32::from_be_bytes(stated_crc);
+											let cacluated_crc =
+												calculate_crc(typ.iter().chain(data.iter()));
 
-							if stated_crc == cacluated_crc {
-								Ok(Chunk{typ, data})
-							} else {
-								Err(ChunkReadError::CrcMismatch{stated:stated_crc, calculated:cacluated_crc})
-							}
-						})
+											if stated_crc == cacluated_crc {
+												Ok(Chunk { typ, data })
+											} else {
+												Err(ChunkReadError::CrcMismatch {
+													stated:stated_crc,
+													calculated:cacluated_crc,
+												})
+											}
+										})
+								})
+						}
 					})
-				}
 			})
-		})
 	}
 
 	/// Writes a PNG chunk to a data stream
@@ -108,15 +124,15 @@ impl Chunk {
 
 /// Represents an error that can occur when decoding a PNG Chunk
 #[derive(Debug)]
-pub enum ReadError{
+pub enum ReadError {
 	/** An IO error */
 	Io(::std::io::Error),
 	/** The chunk's typ is invalid (a byte was outside the range `A-Za-z`) */
-	InvalidTyp([u8;4]),
+	InvalidTyp([u8; 4]),
 	/** The calculated CRC did not match the given CRC */
-	CrcMismatch{stated:u32, calculated:u32},
+	CrcMismatch { stated:u32, calculated:u32 },
 	/** The given magic header didn't match the expected PNG header */
-	MagicMismatch([u8;8]),
+	MagicMismatch([u8; 8]),
 }
 
 impl ::std::fmt::Display for ReadError {
@@ -124,10 +140,18 @@ impl ::std::fmt::Display for ReadError {
 		match self {
 			ReadError::Io(x) => write!(f, "{}", x),
 			ReadError::InvalidTyp(x) => write!(f, "Illegal chunk type: {:?}", x),
-			ReadError::CrcMismatch{stated, calculated} => write!(f, "CRC mismatch: file {:x}; calculated {:x}", stated, calculated),
+			ReadError::CrcMismatch { stated, calculated } => write!(
+				f,
+				"CRC mismatch: file {:x}; calculated {:x}",
+				stated, calculated
+			),
 			ReadError::MagicMismatch(x) => {
 				let bytes = x;
-				let chars:String = x.iter().map(|x| char::from(*x)).map(|x| if x.is_ascii_graphic() {x} else {'.'}).collect();
+				let chars:String = x
+					.iter()
+					.map(|x| char::from(*x))
+					.map(|x| if x.is_ascii_graphic() { x } else { '.' })
+					.collect();
 				write!(f, "Magic didn't match expected: {:?} | {:?}", bytes, chars)
 			},
 		}
@@ -139,20 +163,22 @@ impl From<ChunkReadError> for ReadError {
 		match src {
 			ChunkReadError::Io(x) => ReadError::Io(x),
 			ChunkReadError::InvalidTyp(x) => ReadError::InvalidTyp(x),
-			ChunkReadError::CrcMismatch{stated, calculated} => ReadError::CrcMismatch{stated, calculated},
+			ChunkReadError::CrcMismatch { stated, calculated } => {
+				ReadError::CrcMismatch { stated, calculated }
+			},
 		}
 	}
 }
 
 /// Represents an error that can occur when decoding a PNG Chunk
 #[derive(Debug)]
-pub enum ChunkReadError{
+pub enum ChunkReadError {
 	/** An IO error */
 	Io(::std::io::Error),
 	/** The chunk's typ is invalid (a byte was outside the range `A-Za-z`) */
-	InvalidTyp([u8;4]),
+	InvalidTyp([u8; 4]),
 	/** The calculated CRC did not match the given CRC */
-	CrcMismatch{stated:u32, calculated:u32},
+	CrcMismatch { stated:u32, calculated:u32 },
 }
 
 impl ::std::fmt::Display for ChunkReadError {
@@ -160,7 +186,11 @@ impl ::std::fmt::Display for ChunkReadError {
 		match self {
 			ChunkReadError::Io(x) => write!(f, "{}", x),
 			ChunkReadError::InvalidTyp(x) => write!(f, "Illegal chunk type: {:?}", x),
-			ChunkReadError::CrcMismatch{stated, calculated} => write!(f, "CRC mismatch: file {:x}; calculated {:x}", stated, calculated),
+			ChunkReadError::CrcMismatch { stated, calculated } => write!(
+				f,
+				"CRC mismatch: file {:x}; calculated {:x}",
+				stated, calculated
+			),
 		}
 	}
 }
@@ -176,18 +206,19 @@ fn u32_to_usize(a:u32) -> usize {
 	a as usize
 }
 
-fn calculate_crc<'a, I: IntoIterator<Item=&'a u8>>(buffer:I) -> u32 {
+fn calculate_crc<'a, I:IntoIterator<Item=&'a u8>>(buffer:I) -> u32 {
 	const CRC_POLYNOMIAL:u32 = 0xedb8_8320;
 	fn update_crc(crc:u32, message:u8) -> u32 {
 		let message:u32 = u32::from(message);
 		let mut crc = crc ^ message;
 		for _ in 0..8 {
-			crc = (if crc & 1 != 0 {CRC_POLYNOMIAL} else {0}) ^ (crc >> 1);
+			crc = (if crc & 1 != 0 { CRC_POLYNOMIAL } else { 0 }) ^ (crc >> 1);
 		}
 		crc
 	}
 
-	buffer.into_iter()
+	buffer
+		.into_iter()
 		.fold(u32::max_value(), |crc, message| update_crc(crc, *message))
 		^ u32::max_value()
 }
@@ -200,22 +231,23 @@ mod tests {
 
 		#[test]
 		fn nul() {
-			let val:[u8;0] = [];
+			let val:[u8; 0] = [];
 			let exp:u32 = 0;
 			let res = calculate_crc(val.iter());
-			assert!( exp == res, "{:x} != {:x}", exp, res );
+			assert!(exp == res, "{:x} != {:x}", exp, res);
 		}
 
 		#[test]
 		fn iend() {
-			let val:[u8;4] = [0x49, 0x45, 0x4e, 0x44];
+			let val:[u8; 4] = [0x49, 0x45, 0x4e, 0x44];
 			let exp:u32 = 0xae426082;
 			let res = calculate_crc(&val);
-			assert!( exp == res, "{:x} != {:x}", exp, res );
+			assert!(exp == res, "{:x} != {:x}", exp, res);
 		}
 
 		#[test]
 		fn ihdr_1() {
+			#[rustfmt::skip]
 			let val:[u8;17] = [
 				0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x01, 0x2c,
 				0x00, 0x00, 0x00, 0x96, 0x02, 0x03, 0x00, 0x00,
@@ -223,7 +255,7 @@ mod tests {
 			];
 			let exp:u32 = 0x19355d41;
 			let res = calculate_crc(&val);
-			assert!( exp == res, "{:x} != {:x}", exp, res );
+			assert!(exp == res, "{:x} != {:x}", exp, res);
 		}
 	}
 
@@ -233,14 +265,22 @@ mod tests {
 		#[test]
 		fn tru() {
 			let exp:bool = true;
-			let res = Chunk{typ:*b"IDAt", data:vec![]}.safe_to_copy();
-			assert!( exp == res );
+			let res = Chunk {
+				typ:*b"IDAt",
+				data:vec![],
+			}
+			.safe_to_copy();
+			assert!(exp == res);
 		}
 		#[test]
 		fn fals() {
 			let exp:bool = false;
-			let res = Chunk{typ:*b"IDAT", data:vec![]}.safe_to_copy();
-			assert!( exp == res );
+			let res = Chunk {
+				typ:*b"IDAT",
+				data:vec![],
+			}
+			.safe_to_copy();
+			assert!(exp == res);
 		}
 	}
 }

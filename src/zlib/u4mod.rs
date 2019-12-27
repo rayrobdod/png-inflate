@@ -11,12 +11,14 @@
 
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[rustfmt::skip]
 /// Represents a four-bit number
 pub enum u4 {
 	_0, _1, _2, _3, _4, _5, _6, _7,
 	_8, _9, _A, _B, _C, _D, _E, _F,
 }
 
+#[rustfmt::skip]
 impl u4 {
 	pub fn truncate(src:u8) -> u4 {
 		match src & 0xF {
@@ -62,7 +64,11 @@ impl From<u4> for u8 {
 	}
 }
 
-impl From<u4> for usize { fn from(src:u4) -> usize { usize::from(u8::from(src)) } }
+impl From<u4> for usize {
+	fn from(src:u4) -> usize {
+		usize::from(u8::from(src))
+	}
+}
 
 impl ::std::ops::AddAssign for u4 {
 	fn add_assign(&mut self, other:u4) -> () {
@@ -112,7 +118,10 @@ pub struct ZeroToRangeIter {
 
 impl ZeroToRangeIter {
 	pub fn new(end:u4) -> ZeroToRangeIter {
-		ZeroToRangeIter { current : u4::_0, end : end }
+		ZeroToRangeIter {
+			current:u4::_0,
+			end:end,
+		}
 	}
 }
 
