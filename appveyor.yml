@@ -16,7 +16,7 @@ environment:
 install:
 - cmd: 'C:\cygwin64\setup-x86_64.exe --no-admin -q -P sng'
 - sh: 'sudo apt-get -yq install sng'
-- ps: '$SNG = if ($isLinux) {"/usr/bin/sng"} else {"C:\cygwin64\bin\sng.exe"}'
+- ps: '$SNG = if (Test-Path "/usr/bin/sng") {"/usr/bin/sng"} elseif (Test-Path "C:\cygwin64\bin\sng.exe") {"C:\cygwin64\bin\sng.exe"} else {exit 1}'
 - ps: '& $SNG -V'
 
 - cmd: |
