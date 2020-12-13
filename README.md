@@ -46,4 +46,4 @@ should say `png_inflate` instead of `unspecified`.
 
 # Similar Projects
 
-https://github.com/costerwi/rezip does the same uncompressed repack for zip archive files
+https://github.com/hoijui/ReZipDoc does the same uncompressed repack for zip archive files
