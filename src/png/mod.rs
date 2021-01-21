@@ -227,6 +227,81 @@ mod tests {
 		}
 	}
 
+	mod chunk_read {
+		use super::super::Chunk;
+		use super::super::ChunkReadError;
+		use std::io::ErrorKind;
+
+		fn assert_is_err_eof(e : Result<Chunk, ChunkReadError>) {
+			if let Err(e) = e {
+				if let ChunkReadError::Io(e) = e {
+					if e.kind() == ErrorKind::UnexpectedEof {
+						// success
+					} else {
+						panic!("Was error, but was not EOF");
+					}
+				} else {
+					panic!("Was error, but was not EOF");
+				}
+			} else {
+				panic!("Was not error");
+			}
+		}
+
+		#[test]
+		fn exact_size() {
+			let exp:Chunk = Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]};
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B];
+			let res = Chunk::read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 0 );
+		}
+
+		#[test]
+		fn reads_only_the_amount_needed() {
+			let exp:Chunk = Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]};
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B, 11, 22, 33, 44, 55];
+			let res = Chunk::read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 5 );
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_crc() {
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_data() {
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_typ() {
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_size() {
+			let mut dut:&[u8] = &[0];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_size_2() {
+			let mut dut:&[u8] = &[];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+	}
+
 	mod chunk_safe_to_copy {
 		use super::super::Chunk;
 
