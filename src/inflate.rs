@@ -148,7 +148,7 @@ fn deflate_chunks(indata:png::Chunk, ignore_unsafe_to_copy:bool) -> Result<png::
 	}
 }
 
-/// An iterator transformer that merges sequential IDATs, but otherwise passes through IDATs
+/// An iterator transformer that merges sequential IDATs, but otherwise passes through chunks
 struct ConcatinateIdats <I: Iterator<Item=png::Chunk>> {
 	backing: ::std::iter::Peekable<I>,
 }
@@ -259,13 +259,37 @@ mod tests {
 		use super::super::IteratorExt;
 
 		#[test]
-		fn concat() {
+		fn concatinates_conecutive_idats() {
 			let data = [
 				png::Chunk{typ : *b"IDAT", data: b"12345".to_vec()},
 				png::Chunk{typ : *b"IDAT", data: b"6789A".to_vec()},
 			];
 			let mut dut = data.iter().cloned().concat_idats();
 			assert_eq!(png::Chunk{typ : *b"IDAT", data: b"123456789A".to_vec()}, dut.next().unwrap());
+			assert!(dut.next().is_none());
+		}
+
+		#[test]
+		fn does_not_merge_consecutive_nonidats() {
+			let data = [
+				png::Chunk{typ : *b"iTXt", data: b"12345".to_vec()},
+				png::Chunk{typ : *b"iTXt", data: b"6789A".to_vec()},
+			];
+			let mut dut = data.iter().cloned().concat_idats();
+			assert_eq!(png::Chunk{typ : *b"iTXt", data: b"12345".to_vec()}, dut.next().unwrap());
+			assert_eq!(png::Chunk{typ : *b"iTXt", data: b"6789A".to_vec()}, dut.next().unwrap());
+			assert!(dut.next().is_none());
+		}
+
+		#[test]
+		fn does_not_merge_disparate_chunks() {
+			let data = [
+				png::Chunk{typ : *b"IDAT", data: b"12345".to_vec()},
+				png::Chunk{typ : *b"iTXt", data: b"6789A".to_vec()},
+			];
+			let mut dut = data.iter().cloned().concat_idats();
+			assert_eq!(png::Chunk{typ : *b"IDAT", data: b"12345".to_vec()}, dut.next().unwrap());
+			assert_eq!(png::Chunk{typ : *b"iTXt", data: b"6789A".to_vec()}, dut.next().unwrap());
 			assert!(dut.next().is_none());
 		}
 	}
