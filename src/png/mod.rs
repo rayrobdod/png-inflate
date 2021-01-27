@@ -312,6 +312,106 @@ mod tests {
 		}
 	}
 
+	mod file_read {
+		use super::super::read;
+		use super::super::Chunk;
+		use super::super::ReadError;
+		use ::std::io::ErrorKind;
+
+		fn assert_is_err_eof(e : Result<Vec<Chunk>, ReadError>) {
+			if let Err(e) = e {
+				if let ReadError::Io(e) = e {
+					if e.kind() == ErrorKind::UnexpectedEof {
+						// success
+					} else {
+						panic!("Was error, but was not EOF");
+					}
+				} else {
+					panic!("Was error, but was not EOF");
+				}
+			} else {
+				panic!("Was not error");
+			}
+		}
+
+		fn assert_is_err_magic(e : Result<Vec<Chunk>, ReadError>) {
+			if let Err(e) = e {
+				if let ReadError::MagicMismatch(_) = e {
+					// success
+				} else {
+					panic!("Was error, but was not MagicMismatch");
+				}
+			} else {
+				panic!("Was not error");
+			}
+		}
+
+		#[test]
+		fn normal_case() {
+			let exp = vec![
+				Chunk{typ:*b"FIRS", data:vec![]},
+				Chunk{typ:*b"SECO", data:vec![]},
+				Chunk{typ:*b"THIR", data:vec![]},
+			];
+			let mut dut:&[u8] = &[
+				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
+				0, 0, 0, 0, b'F', b'I', b'R', b'S', 0x9A, 0x9F, 0x51, 0x2A,
+				0, 0, 0, 0, b'S', b'E', b'C', b'O', 0xB3, 0x9A, 0x70, 0xBC,
+				0, 0, 0, 0, b'T', b'H', b'I', b'R', 0xBF, 0x7C, 0x5F, 0x05,
+			];
+			let res = read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 0 );
+		}
+
+		#[test]
+		fn does_not_treat_iend_specially() {
+			let exp = vec![
+				Chunk{typ:*b"FIRS", data:vec![]},
+				Chunk{typ:*b"IEND", data:vec![]},
+				Chunk{typ:*b"THIR", data:vec![]},
+			];
+			let mut dut:&[u8] = &[
+				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
+				0, 0, 0, 0, b'F', b'I', b'R', b'S', 0x9A, 0x9F, 0x51, 0x2A,
+				0, 0, 0, 0, b'I', b'E', b'N', b'D', 0xAE, 0x42, 0x60, 0x82,
+				0, 0, 0, 0, b'T', b'H', b'I', b'R', 0xBF, 0x7C, 0x5F, 0x05,
+			];
+			let res = read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 0 );
+		}
+
+		#[test]
+		fn incomplete_chunk_1() {
+			let mut dut:&[u8] = &[
+				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
+				0,
+			];
+			let res = read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn incomplete_chunk_2() {
+			let mut dut:&[u8] = &[
+				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
+				0, 0,
+			];
+			let res = read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn incorrect_magic() {
+			let mut dut:&[u8] = &[
+				138, b'M', b'N', b'G', b'\r', b'\n', 26, b'\n',
+			];
+			let res = read(&mut dut);
+			assert_is_err_magic(res);
+		}
+	}
+
 	mod chunk_safe_to_copy {
 		use super::super::Chunk;
 
