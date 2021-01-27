@@ -1,5 +1,6 @@
 ///! http://www.libpng.org/pub/png/
 
+use ::std::io::ErrorKind;
 use ::std::io::Read;
 use ::std::io::Write;
 use ::std::iter::Iterator;
@@ -20,13 +21,12 @@ pub fn read(file:&mut dyn Read) -> Result<Vec<Chunk>, ReadError> {
 
 			loop {
 				match Chunk::read(file) {
-					Result::Ok(x) => {
-						let typ = &x.typ.clone();
+					Result::Ok(Some(x)) => {
 						retval.push(x);
-						if typ == b"IEND" {
-							break Ok(retval);
-						}
 					},
+					Result::Ok(None) => {
+						break Ok(retval);
+					}
 					Result::Err(x) => {
 						break Err(ReadError::from(x));
 					},
@@ -57,9 +57,17 @@ pub struct Chunk {
 
 impl Chunk {
 	/// Reads a PNG chunk from a data stream
-	fn read(file:&mut dyn Read) -> Result<Chunk, ChunkReadError> {
+	fn read(file:&mut dyn Read) -> Result<Option<Chunk>, ChunkReadError> {
 		let mut size:[u8;4] = [0,0,0,0];
-		file.read_exact(&mut size).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
+		let (mut size_head, mut size_tail) = size.split_at_mut(1);
+		if let Err(e) = file.read_exact(&mut size_head) {
+			if e.kind() == ErrorKind::UnexpectedEof {
+				return Ok(None)
+			} else {
+				return Err(ChunkReadError::Io(e))
+			}
+		}
+		file.read_exact(&mut size_tail).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
 			let size = u32::from_be_bytes(size);
 
 			let mut typ:[u8;4] = [0,0,0,0];
@@ -79,7 +87,7 @@ impl Chunk {
 							let cacluated_crc = calculate_crc(typ.iter().chain(data.iter()));
 
 							if stated_crc == cacluated_crc {
-								Ok(Chunk{typ, data})
+								Ok(Some(Chunk{typ, data}))
 							} else {
 								Err(ChunkReadError::CrcMismatch{stated:stated_crc, calculated:cacluated_crc})
 							}
@@ -224,6 +232,183 @@ mod tests {
 			let exp:u32 = 0x19355d41;
 			let res = calculate_crc(&val);
 			assert!( exp == res, "{:x} != {:x}", exp, res );
+		}
+	}
+
+	mod chunk_read {
+		use super::super::Chunk;
+		use super::super::ChunkReadError;
+		use ::std::io::ErrorKind;
+
+		fn assert_is_err_eof(e : Result<Option<Chunk>, ChunkReadError>) {
+			if let Err(e) = e {
+				if let ChunkReadError::Io(e) = e {
+					if e.kind() == ErrorKind::UnexpectedEof {
+						// success
+					} else {
+						panic!("Was error, but was not EOF");
+					}
+				} else {
+					panic!("Was error, but was not EOF");
+				}
+			} else {
+				panic!("Was not error");
+			}
+		}
+
+		#[test]
+		fn exact_size() {
+			let exp = Some(Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]});
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B];
+			let res = Chunk::read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 0 );
+		}
+
+		#[test]
+		fn reads_only_the_amount_needed() {
+			let exp = Some(Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]});
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B, 11, 22, 33, 44, 55];
+			let res = Chunk::read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 5 );
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_crc() {
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_data() {
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_typ() {
+			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn errors_if_unexpected_eof_size() {
+			let mut dut:&[u8] = &[0];
+			let res = Chunk::read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn reports_valid_eof() {
+			let exp = None;
+			let mut dut:&[u8] = &[];
+			let res = Chunk::read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 0 );
+		}
+	}
+
+	mod file_read {
+		use super::super::read;
+		use super::super::Chunk;
+		use super::super::ReadError;
+		use ::std::io::ErrorKind;
+
+		fn assert_is_err_eof(e : Result<Vec<Chunk>, ReadError>) {
+			if let Err(e) = e {
+				if let ReadError::Io(e) = e {
+					if e.kind() == ErrorKind::UnexpectedEof {
+						// success
+					} else {
+						panic!("Was error, but was not EOF");
+					}
+				} else {
+					panic!("Was error, but was not EOF");
+				}
+			} else {
+				panic!("Was not error");
+			}
+		}
+
+		fn assert_is_err_magic(e : Result<Vec<Chunk>, ReadError>) {
+			if let Err(e) = e {
+				if let ReadError::MagicMismatch(_) = e {
+					// success
+				} else {
+					panic!("Was error, but was not MagicMismatch");
+				}
+			} else {
+				panic!("Was not error");
+			}
+		}
+
+		#[test]
+		fn normal_case() {
+			let exp = vec![
+				Chunk{typ:*b"FIRS", data:vec![]},
+				Chunk{typ:*b"SECO", data:vec![]},
+				Chunk{typ:*b"THIR", data:vec![]},
+			];
+			let mut dut:&[u8] = &[
+				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
+				0, 0, 0, 0, b'F', b'I', b'R', b'S', 0x9A, 0x9F, 0x51, 0x2A,
+				0, 0, 0, 0, b'S', b'E', b'C', b'O', 0xB3, 0x9A, 0x70, 0xBC,
+				0, 0, 0, 0, b'T', b'H', b'I', b'R', 0xBF, 0x7C, 0x5F, 0x05,
+			];
+			let res = read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 0 );
+		}
+
+		#[test]
+		fn does_not_treat_iend_specially() {
+			let exp = vec![
+				Chunk{typ:*b"FIRS", data:vec![]},
+				Chunk{typ:*b"IEND", data:vec![]},
+				Chunk{typ:*b"THIR", data:vec![]},
+			];
+			let mut dut:&[u8] = &[
+				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
+				0, 0, 0, 0, b'F', b'I', b'R', b'S', 0x9A, 0x9F, 0x51, 0x2A,
+				0, 0, 0, 0, b'I', b'E', b'N', b'D', 0xAE, 0x42, 0x60, 0x82,
+				0, 0, 0, 0, b'T', b'H', b'I', b'R', 0xBF, 0x7C, 0x5F, 0x05,
+			];
+			let res = read(&mut dut).unwrap();
+			assert!( exp == res );
+			assert!( dut.len() == 0 );
+		}
+
+		#[test]
+		fn incomplete_chunk_1() {
+			let mut dut:&[u8] = &[
+				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
+				0,
+			];
+			let res = read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn incomplete_chunk_2() {
+			let mut dut:&[u8] = &[
+				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
+				0, 0,
+			];
+			let res = read(&mut dut);
+			assert_is_err_eof(res);
+		}
+
+		#[test]
+		fn incorrect_magic() {
+			let mut dut:&[u8] = &[
+				138, b'M', b'N', b'G', b'\r', b'\n', 26, b'\n',
+			];
+			let res = read(&mut dut);
+			assert_is_err_magic(res);
 		}
 	}
 
