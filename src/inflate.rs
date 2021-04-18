@@ -27,17 +27,21 @@ fn main() {
 		::std::process::exit(0);
 	}
 
-	let mut input = FileOrStdin::from(args.input_file);
-	let mut output = FileOrStdout::from(args.output_file);
+	let input = {
+		let mut infile = FileOrStdin::from(args.input_file);
+		png::read(&mut infile)
+	};
+
+	let mut outfile = FileOrStdout::from(args.output_file);
 	let ignore_unsafe_to_copy = args.ignore_unsafe_to_copy;
 
-	match png::read(&mut input) {
+	match input {
 		Result::Ok(indata) => {
 			let outdata:Result<Vec<png::Chunk>, Error> = indata.iter().cloned().concat_idats().map(|x| deflate_chunks(x, ignore_unsafe_to_copy)).collect();
 
 			match outdata {
 				Result::Ok(outdata) => {
-					match png::write(&mut output, outdata) {
+					match outfile.write(|f| png::write(f, outdata)) {
 						Result::Ok(()) => {
 							// Ok
 						}

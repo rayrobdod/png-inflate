@@ -1,6 +1,9 @@
 ///! ::std:io::{Read, Write} implementations that are a sum type of other
 ///! ::std::io::{Read, Write} implementations
 
+extern crate atomicwrites;
+use ::std::io::Write;
+
 #[derive(Debug)]
 pub enum FileOrStdin {
 	File(::std::fs::File),
@@ -25,9 +28,8 @@ impl ::std::io::Read for FileOrStdin {
 	}
 }
 
-#[derive(Debug)]
 pub enum FileOrStdout {
-	File(::std::fs::File),
+	File(atomicwrites::AtomicFile),
 	Stdout(::std::io::Stdout),
 }
 
@@ -35,22 +37,20 @@ impl From<Option<String>> for FileOrStdout {
 	fn from(src:Option<String>) -> FileOrStdout {
 		match src {
 			None => FileOrStdout::Stdout(::std::io::stdout()),
-			Some(s) => FileOrStdout::File(::std::fs::OpenOptions::new().write(true).create(true).open(s).expect("Could not open output file")),
+			Some(s) => FileOrStdout::File(atomicwrites::AtomicFile::new(s, atomicwrites::AllowOverwrite)),
 		}
 	}
 }
 
-impl ::std::io::Write for FileOrStdout {
-	fn write(&mut self, buf: &[u8]) -> ::std::io::Result<usize> {
+impl FileOrStdout {
+	pub fn write<R, F>(&mut self, f: F) -> ::std::io::Result<R> where F: FnOnce(&mut dyn Write) -> ::std::io::Result<R> {
 		match self {
-			FileOrStdout::File(x) => x.write(buf),
-			FileOrStdout::Stdout(x) => x.write(buf),
-		}
-	}
-	fn flush(&mut self) -> ::std::io::Result<()> {
-		match self {
-			FileOrStdout::File(x) => x.flush(),
-			FileOrStdout::Stdout(x) => x.flush(),
+			FileOrStdout::File(x) => {
+				let a:std::result::Result::<R, atomicwrites::Error<std::io::Error>> = x.write(|file| f(file));
+				let b:std::result::Result::<R, std::io::Error> = a.map_err(|e| e.into());
+				b
+			},
+			FileOrStdout::Stdout(x) => f(x),
 		}
 	}
 }
