@@ -8,16 +8,16 @@ use ::file_or_stdio::FileOrStdin;
 use ::file_or_stdio::FileOrStdout;
 use ::std::result::Result;
 
-const PROGRAM_NAME:&'static str = env!("CARGO_PKG_NAME");
-const PROGRAM_VERSION:&'static str = env!("CARGO_PKG_VERSION");
-const PROGRAM_HOMEPAGE:&'static str = env!("CARGO_PKG_HOMEPAGE");
-const PROGRAM_DESCRIPTION:&'static str = env!("CARGO_PKG_DESCRIPTION");
+const PROGRAM_NAME:&str = env!("CARGO_PKG_NAME");
+const PROGRAM_VERSION:&str = env!("CARGO_PKG_VERSION");
+const PROGRAM_HOMEPAGE:&str = env!("CARGO_PKG_HOMEPAGE");
+const PROGRAM_DESCRIPTION:&str = env!("CARGO_PKG_DESCRIPTION");
 
 fn main() {
 	let args = ::std::env::args().fold(Args::default(), |fold, item| fold.push(&item));
 
 	if args.help {
-		Args::print_usage(& args.program_name.unwrap_or("".to_string()));
+		Args::print_usage(& args.program_name.unwrap_or_else(|| "".to_string()));
 		::std::process::exit(0);
 	}
 
@@ -210,7 +210,8 @@ struct Args {
 
 impl Args {
 	/// Print to stdout a usage statement for a program with this set of arguments
-	fn print_usage(program_name:&str) -> () {
+	fn print_usage(program_name:&str) {
+		#![allow(clippy::print_literal)]
 		// hardcoded, but kept close to the rest of the argument data so that hopefully
 		// we remember to change this when the argument data is changed
 		println!("  {0} [OPTIONS] [--] infile.png [outfile.png]", program_name);
@@ -238,7 +239,7 @@ impl Args {
 			} else if arg == "--version" {
 				self.version = true;
 			} else {
-				panic!(format!("Unknown flag: {}", arg));
+				panic!("Unknown flag");
 			}
 		} else {
 			if self.program_name == Option::None {

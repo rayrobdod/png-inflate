@@ -65,7 +65,7 @@ impl From<u4> for u8 {
 impl From<u4> for usize { fn from(src:u4) -> usize { usize::from(u8::from(src)) } }
 
 impl ::std::ops::AddAssign for u4 {
-	fn add_assign(&mut self, other:u4) -> () {
+	fn add_assign(&mut self, other:u4) {
 		*self = *self + other;
 	}
 }
@@ -112,7 +112,7 @@ pub struct ZeroToRangeIter {
 
 impl ZeroToRangeIter {
 	pub fn new(end:u4) -> ZeroToRangeIter {
-		ZeroToRangeIter { current : u4::_0, end : end }
+		ZeroToRangeIter { current : u4::_0, end }
 	}
 }
 
@@ -123,7 +123,7 @@ impl Iterator for ZeroToRangeIter {
 			None
 		} else {
 			let retval = self.current;
-			self.current = self.current + u4::_1;
+			self.current += u4::_1;
 			Some(retval)
 		}
 	}

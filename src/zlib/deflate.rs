@@ -75,28 +75,30 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 			1 => { // fixed codes
 				loop {
 					let code = option_to_result(decode_fixed_huffman_code(&mut bitreader))?;
-					//eprintln!("{}", code);
-					if code == 256 {
-						break;
-					} else if code < 256 {
-						retval.push((code & 0xFF) as u8);
-					} else {
-						let length_index = code - 257;
-						let length_extra_bits = LENGTH_EXTRA_BITS[usize::from(length_index)];
-						let length:u16 = 3 + option_to_result(bitreader.read_n_rev(length_extra_bits))?
-								+ LENGTH_EXTRA_BITS.iter().take(usize::from(length_index)).map(|x| x.nth_bit()).sum::<u16>();
-						let length = if code == 285 {length - 1} else {length};
+					match code.cmp(&256) {
+						::std::cmp::Ordering::Equal => {
+							break;
+						},
+						::std::cmp::Ordering::Less => {
+							retval.push((code & 0xFF) as u8);
+						},
+						::std::cmp::Ordering::Greater => {
+							let length_index = code - 257;
+							let length_extra_bits = LENGTH_EXTRA_BITS[usize::from(length_index)];
+							let length:u16 = 3 + option_to_result(bitreader.read_n_rev(length_extra_bits))?
+									+ LENGTH_EXTRA_BITS.iter().take(usize::from(length_index)).map(|x| x.nth_bit()).sum::<u16>();
+							let length = if code == 285 {length - 1} else {length};
 
-						let distance_index = option_to_result(bitreader.read_n(u4::_5))?;
-						let distance_extra_bits = DISTANCE_EXTRA_BITS[usize::from(distance_index)];
-						let distance:u16 = 1 + option_to_result(bitreader.read_n_rev(distance_extra_bits))?
-								+ DISTANCE_EXTRA_BITS.iter().take(usize::from(distance_index)).map(|x| x.nth_bit()).sum::<u16>();
+							let distance_index = option_to_result(bitreader.read_n(u4::_5))?;
+							let distance_extra_bits = DISTANCE_EXTRA_BITS[usize::from(distance_index)];
+							let distance:u16 = 1 + option_to_result(bitreader.read_n_rev(distance_extra_bits))?
+									+ DISTANCE_EXTRA_BITS.iter().take(usize::from(distance_index)).map(|x| x.nth_bit()).sum::<u16>();
 
-						//eprintln!("\t{} {} ({})", length, distance, distance_index);
-						for _ in 0..length {
-							let index_to_copy = retval.len() - usize::from(distance);
-							let value_to_copy = retval.get(index_to_copy).unwrap().clone();
-							retval.push(value_to_copy);
+							for _ in 0..length {
+								let index_to_copy = retval.len() - usize::from(distance);
+								let value_to_copy = *retval.get(index_to_copy).unwrap();
+								retval.push(value_to_copy);
+							}
 						}
 					}
 				}
@@ -132,29 +134,30 @@ pub fn inflate<I: Iterator<Item=u8>>(input:&mut I) -> Result<Vec<u8>, InflateErr
 
 				loop {
 					let code = option_to_result(length_codes.decode(&mut bitreader))?;
-					//eprintln!("{:x}", code);
-					if code == 256 {
-						break;
-					} else if code < 256 {
-						retval.push((code & 0xFF) as u8);
-					} else {
-						let length_index = code - 257;
-						let length_extra_bits = LENGTH_EXTRA_BITS[usize::from(length_index)];
-						let length:u16 = 3 + option_to_result(bitreader.read_n_rev(length_extra_bits))?
-								+ LENGTH_EXTRA_BITS.iter().take(usize::from(length_index)).map(|x| x.nth_bit()).sum::<u16>();
-						let length = if code == 285 {length - 1} else {length};
+					match code.cmp(&256) {
+						::std::cmp::Ordering::Equal => {
+							break
+						},
+						::std::cmp::Ordering::Less => {
+							retval.push((code & 0xFF) as u8);
+						},
+						::std::cmp::Ordering::Greater => {
+							let length_index = code - 257;
+							let length_extra_bits = LENGTH_EXTRA_BITS[usize::from(length_index)];
+							let length:u16 = 3 + option_to_result(bitreader.read_n_rev(length_extra_bits))?
+									+ LENGTH_EXTRA_BITS.iter().take(usize::from(length_index)).map(|x| x.nth_bit()).sum::<u16>();
+							let length = if code == 285 {length - 1} else {length};
 
-						let distance_index = option_to_result(distance_codes.decode(&mut bitreader))?;
-						let distance_extra_bits = DISTANCE_EXTRA_BITS[usize::from(distance_index)];
-						let distance:u16 = 1 + option_to_result(bitreader.read_n_rev(distance_extra_bits))?
-								+ DISTANCE_EXTRA_BITS.iter().take(usize::from(distance_index)).map(|x| x.nth_bit()).sum::<u16>();
+							let distance_index = option_to_result(distance_codes.decode(&mut bitreader))?;
+							let distance_extra_bits = DISTANCE_EXTRA_BITS[usize::from(distance_index)];
+							let distance:u16 = 1 + option_to_result(bitreader.read_n_rev(distance_extra_bits))?
+									+ DISTANCE_EXTRA_BITS.iter().take(usize::from(distance_index)).map(|x| x.nth_bit()).sum::<u16>();
 
-						//eprintln!("\t{} {} ({})", length, distance, distance_index);
-						for _ in 0..length {
-							let index_to_copy = retval.len() - usize::from(distance);
-							let value_to_copy = retval.get(index_to_copy).unwrap().clone();
-							//eprintln!("\t\t{:x}, ({})", value_to_copy, index_to_copy);
-							retval.push(value_to_copy);
+							for _ in 0..length {
+								let index_to_copy = retval.len() - usize::from(distance);
+								let value_to_copy = *retval.get(index_to_copy).unwrap();
+								retval.push(value_to_copy);
+							}
 						}
 					}
 				}
@@ -226,7 +229,7 @@ impl DynamicHuffmanCodes {
 	/// Create the set of codes from the code lengths of each item
 	fn from_lengths(lengths:&[u4]) -> DynamicHuffmanCodes {
 		let mut lengths:Vec<DynamicHuffmanCodeValue> = lengths.iter().cloned().zip(0..)
-				.map(|(len, val)| DynamicHuffmanCodeValue{length:len, value:val})
+				.map(|(length, value)| DynamicHuffmanCodeValue{length, value})
 				.filter(|x| x.length != u4::_0).collect();
 		lengths.sort_by_key(|x| x.length);
 		DynamicHuffmanCodes{ backing:lengths }

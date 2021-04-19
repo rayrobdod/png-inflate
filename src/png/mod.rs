@@ -14,7 +14,7 @@ const MAGIC:[u8;8] = [137, 80, 78, 71, 13, 10, 26, 10];
 /// Reads a png file, and returns the chunks contained in that file
 pub fn read(file:&mut dyn Read) -> Result<Vec<Chunk>, ReadError> {
 	let mut magic:[u8;8] = [0,0,0,0,0,0,0,0];
-	file.read_exact(&mut magic).map_err(|x| ReadError::Io(x)).and_then(|_| {
+	file.read_exact(&mut magic).map_err(ReadError::Io).and_then(|_| {
 		let magic = magic;
 		if magic == MAGIC {
 			let mut retval:Vec<Chunk> = Vec::new();
@@ -67,22 +67,22 @@ impl Chunk {
 				return Err(ChunkReadError::Io(e))
 			}
 		}
-		file.read_exact(&mut size_tail).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
+		file.read_exact(&mut size_tail).map_err(ChunkReadError::Io).and_then(|_| {
 			let size = u32::from_be_bytes(size);
 
 			let mut typ:[u8;4] = [0,0,0,0];
-			file.read_exact(&mut typ).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
+			file.read_exact(&mut typ).map_err(ChunkReadError::Io).and_then(|_| {
 				let typ = typ;
 
 				if ! typ.iter().all(|c| (0x41 <= *c && *c <= 0x5A) || (0x61 <= *c && *c <= 0x7A)) {
 					Err(ChunkReadError::InvalidTyp(typ))
 				} else {
 					let mut data:Vec<u8> = vec![0; u32_to_usize(size)];
-					file.read_exact(&mut data).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
+					file.read_exact(&mut data).map_err(ChunkReadError::Io).and_then(|_| {
 						let data = data;
 
 						let mut stated_crc:[u8;4] = [0; 4];
-						file.read_exact(&mut stated_crc).map_err(|x| ChunkReadError::Io(x)).and_then(|_| {
+						file.read_exact(&mut stated_crc).map_err(ChunkReadError::Io).and_then(|_| {
 							let stated_crc = u32::from_be_bytes(stated_crc);
 							let cacluated_crc = calculate_crc(typ.iter().chain(data.iter()));
 
@@ -109,7 +109,7 @@ impl Chunk {
 
 	/// Returns whether the chunk type is safe to copy without knowing what it is
 	pub fn safe_to_copy(&self) -> bool {
-		return 0 != (self.typ[3] & 0x20);
+		0 != (self.typ[3] & 0x20)
 	}
 }
 

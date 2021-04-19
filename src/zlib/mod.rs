@@ -41,7 +41,7 @@ struct Header {
 
 impl Header {
 	fn new(window_size_exponent:u4, compression_level:CompressionLevel) -> Header {
-		Header{window_size_exponent:window_size_exponent, compression_level:compression_level}
+		Header{window_size_exponent, compression_level}
 	}
 
 	#[allow(dead_code)]
@@ -68,9 +68,7 @@ impl Header {
 				_ => panic!("")
 			};
 
-			if method != u4::_8 {
-				Err(InflateError::UnsupportedHeader)
-			} else if dict {
+			if method != u4::_8 || dict {
 				Err(InflateError::UnsupportedHeader)
 			} else {
 				Ok(Header::new(info, level))
