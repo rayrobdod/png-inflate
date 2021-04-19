@@ -46,6 +46,7 @@ test_script:
 - ps: './test/setup.ps1'
 - ps: './test/idempotent.ps1'
 - ps: './test/semantics.ps1'
+- ps: './test/truncate.ps1'
 
 artifacts:
 - path: target\release\png_inflate.exe.gz

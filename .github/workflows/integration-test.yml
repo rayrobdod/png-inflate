@@ -15,10 +15,12 @@ jobs:
       run: '$GITHUB_WORKSPACE/target/debug/png_inflate --version'
     - name: Setup Tests
       run: 'pwsh -File $GITHUB_WORKSPACE/test/setup.ps1'
-    - name: Run tests A
+    - name: Run tests Idempotent
       run: 'pwsh -File $GITHUB_WORKSPACE/test/idempotent.ps1'
-    - name: Run tests B
+    - name: Run tests Semantics
       run: 'pwsh -File $GITHUB_WORKSPACE/test/semantics.ps1'
+    - name: Run tests Truncate
+      run: 'pwsh -File $GITHUB_WORKSPACE/test/truncate.ps1'
   windows:
     runs-on: windows-latest
     env:
@@ -38,9 +40,12 @@ jobs:
     - name: Setup Tests
       shell: pwsh
       run: 'pwsh -File $env:GITHUB_WORKSPACE\test\setup.ps1'
-    - name: Run tests A
+    - name: Run tests idempotent
       shell: pwsh
       run: 'pwsh -File $env:GITHUB_WORKSPACE\test\idempotent.ps1'
-    - name: Run tests B
+    - name: Run tests semantics
       shell: pwsh
       run: 'pwsh -File $env:GITHUB_WORKSPACE\test\semantics.ps1'
+    - name: Run tests truncate
+      shell: pwsh
+      run: 'pwsh -File $env:GITHUB_WORKSPACE\test\truncate.ps1'
