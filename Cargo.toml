@@ -19,3 +19,4 @@ name = "png_inflate"
 path = "src/inflate.rs"
 
 [dependencies]
+atomicwrites = "0.3.*"
