@@ -34,3 +34,4 @@ fn test_one(infile:&Path) {
 }
 
 for_each_valid_file!(test_one);
+for_each_otherinvalid_file!(test_one);
