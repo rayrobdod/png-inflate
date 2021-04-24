@@ -16,8 +16,8 @@ environment:
 install:
 - cmd: 'C:\cygwin64\setup-x86_64.exe --no-admin -q -P sng'
 - sh: 'sudo apt-get -yq install sng'
-- ps: '$SNG = if (Test-Path "/usr/bin/sng") {"/usr/bin/sng"} elseif (Test-Path "C:\cygwin64\bin\sng.exe") {"C:\cygwin64\bin\sng.exe"} else {exit 1}'
-- ps: '& $SNG -V'
+- ps: '$env:SNG = if (Test-Path "/usr/bin/sng") {"/usr/bin/sng"} elseif (Test-Path "C:\cygwin64\bin\sng.exe") {"C:\cygwin64\bin\sng.exe"} else {exit 1}'
+- ps: '& $env:SNG -V'
 
 - cmd: |
     appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
@@ -42,12 +42,6 @@ test_script:
 - sh: 'cargo test $MODE'
 
 - ps: './target/release/png_inflate --version'
-
-- ps: './test/setup.ps1'
-- ps: './test/idempotent.ps1'
-- ps: './test/semantics.ps1'
-- ps: './test/truncate.ps1'
-
 artifacts:
 - path: target\release\png_inflate.exe.gz
 - path: target\release\png_inflate.gz

@@ -63,6 +63,7 @@ name = "png_inflate"
 version = "0.0.0-SNAPSHOT"
 dependencies = [
  "atomicwrites",
+ "tempfile",
 ]
 
 [[package]]

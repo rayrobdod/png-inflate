@@ -20,3 +20,4 @@ path = "src/inflate.rs"
 
 [dependencies]
 atomicwrites = "0.3.*"
+tempfile = "3.*"
