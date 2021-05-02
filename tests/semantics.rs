@@ -1,16 +1,18 @@
 ///! For each valid test case, asserts that the dut creates semantically-identical files
 
 extern crate tempfile;
+extern crate png_inflate_derive;
 
 use ::std::fs::read;
 use ::std::path::Path;
 use ::std::process::Command;
 use tempfile::NamedTempFile;
+use png_inflate_derive::generate_for_each_files;
 
 const PROGRAM_EXE:&str = env!("CARGO_BIN_EXE_png_inflate");
 const SNG_EXE:&str = env!("SNG");
 
-include!(concat!(env!("OUT_DIR"), "/cases.rs"));
+generate_for_each_files!();
 
 fn test_one(infile:&Path) {
 	let orig = NamedTempFile::new().expect("");
