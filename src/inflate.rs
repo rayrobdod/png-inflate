@@ -1,4 +1,4 @@
-///! A program that takes a png file and deflates the compressed chunks
+//! A program that takes a png file and deflates the compressed chunks
 
 mod file_or_stdio;
 mod png;

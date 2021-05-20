@@ -1,4 +1,4 @@
-///! For each valid test case, asserts that the dut is idempotent
+//! For each valid test case, asserts that the dut is idempotent
 
 extern crate tempfile;
 extern crate png_inflate_derive;

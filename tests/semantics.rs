@@ -1,4 +1,4 @@
-///! For each valid test case, asserts that the dut creates semantically-identical files
+//! For each valid test case, asserts that the dut creates semantically-identical files
 
 extern crate tempfile;
 extern crate png_inflate_derive;

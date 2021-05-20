@@ -1,4 +1,4 @@
-///! "ZLIB Compressed Data Format Specification" <https://www.ietf.org/rfc/rfc1950.txt>
+//! "ZLIB Compressed Data Format Specification" <https://www.ietf.org/rfc/rfc1950.txt>
 
 mod u4mod;
 pub use self::u4mod::u4;

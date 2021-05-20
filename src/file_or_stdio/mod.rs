@@ -1,5 +1,5 @@
-///! ::std:io::{Read, Write} implementations that are a sum type of other
-///! ::std::io::{Read, Write} implementations
+//! ::std:io::{Read, Write} implementations that are a sum type of other
+//! ::std::io::{Read, Write} implementations
 
 extern crate atomicwrites;
 use ::std::io::Write;

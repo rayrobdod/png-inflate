@@ -1,4 +1,4 @@
-///! Contains an iterator transformer that transforms a iterator<u8> iterator over the bits of that stream
+//! Contains an iterator transformer that transforms a iterator\<u8\> iterator over the bits of that stream
 use super::u4;
 use super::u4ZeroToRangeIter;
 

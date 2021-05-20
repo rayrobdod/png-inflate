@@ -1,4 +1,4 @@
-///! Checks that files that should be rejected are rejected
+//! Checks that files that should be rejected are rejected
 
 extern crate tempfile;
 extern crate png_inflate_derive;

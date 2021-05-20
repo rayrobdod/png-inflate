@@ -1,4 +1,4 @@
-///! Asserts that, when the dut writes to an output file, that output file is truncated
+//! Asserts that, when the dut writes to an output file, that output file is truncated
 
 extern crate tempfile;
 extern crate png_inflate_derive;

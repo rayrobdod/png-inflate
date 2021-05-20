@@ -1,4 +1,4 @@
-///! http://www.libpng.org/pub/png/
+//! http://www.libpng.org/pub/png/
 
 use ::std::io::ErrorKind;
 use ::std::io::Read;
