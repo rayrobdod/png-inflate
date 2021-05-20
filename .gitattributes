@@ -2,6 +2,8 @@
 *.png	binary	diff=png	-filter
 *.ps1	text	diff=powershell
 *.rs	text	diff=rust
-*.yml	text	diff=yaml
 *.toml	text	diff=toml
-Cargo.lock	binary
+*.yml	text	diff=yaml
+/.gitattributes	filter=sort
+/Cargo.lock	binary
+/tests/PngSuite/*	binary

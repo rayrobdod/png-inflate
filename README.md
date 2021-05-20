@@ -1,6 +1,6 @@
 # Png Inflate
 [![Appveyor Build](https://ci.appveyor.com/api/projects/status/ypi8acefrievc54i/branch/master?svg=true)](https://ci.appveyor.com/project/rayrobdod/png-inflate/branch/master)
-![Integration Test](https://github.com/rayrobdod/png-inflate/workflows/Integration%20Test/badge.svg)
+![Tests](https://github.com/rayrobdod/png-inflate/actions/workflows/test.yml/badge.svg)
 
 PNG images contain deflate-compressed image data. Small changes to the raw image data can result in in
 disproportionately large changes in the compressed data. Especially if different editors with different compression
