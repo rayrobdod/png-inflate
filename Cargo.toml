@@ -1,6 +1,6 @@
 [package]
 name = "png_inflate"
-version = "2021.6.12"
+version = "0.0.0-SNAPSHOT"
 authors = [
     "Raymond Dodge <git@rayrobdod.name>"
 ]

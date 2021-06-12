@@ -1,5 +1,7 @@
 # Changelog
 
+## [Unreleased]
+
 ## [v2021.6.12] 2021-06-12
 * No longer truncate files after the first IEND chunk.
 * When the destination is file, instead of directly writing to the destination file, write to a
