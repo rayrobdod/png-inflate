@@ -316,7 +316,7 @@ mod tests {
 			for i in u16::min_value()..u16::max_value() {
 				let bits:[u8;2] = [((i >> 8) & 0xFF) as u8, (i & 0xFF) as u8];
 				let bits = bits.iter().cloned();
-				let mut bits = ::zlib::bits::Bits::new(bits);
+				let mut bits = super::super::super::bits::Bits::new(bits);
 				res[usize::from(decode_fixed_huffman_code(&mut bits).unwrap())] = true;
 			}
 

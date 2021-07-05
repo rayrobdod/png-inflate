@@ -4,6 +4,7 @@ version = "0.0.0-SNAPSHOT"
 authors = [
     "Raymond Dodge <git@rayrobdod.name>"
 ]
+edition = "2018"
 publish = false
 description = "A filter that decompresses a png image's internal data structures"
 repository = "https://github.com/rayrobdod/png-inflate"

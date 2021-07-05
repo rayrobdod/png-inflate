@@ -4,8 +4,8 @@ mod file_or_stdio;
 mod png;
 mod zlib;
 
-use ::file_or_stdio::FileOrStdin;
-use ::file_or_stdio::FileOrStdout;
+use self::file_or_stdio::FileOrStdin;
+use self::file_or_stdio::FileOrStdout;
 use ::std::result::Result;
 
 const PROGRAM_NAME:&str = env!("CARGO_PKG_NAME");
