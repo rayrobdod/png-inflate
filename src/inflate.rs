@@ -166,7 +166,7 @@ impl <I: Iterator<Item=png::Chunk>> Iterator for ConcatinateIdats<I> {
 				if sum.typ == *b"IDAT" {
 					let mut retval_data = sum.data;
 					while self.backing.peek().map(|x| x.typ) == Some(*b"IDAT") {
-						retval_data.append(&mut self.backing.next().unwrap().data.clone());
+						retval_data.extend_from_slice(&self.backing.next().unwrap().data);
 					}
 					Some(png::Chunk{
 						typ : *b"IDAT",
