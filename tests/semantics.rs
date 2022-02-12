@@ -14,7 +14,7 @@ const SNG_EXE:&str = env!("SNG");
 
 generate_for_each_files!();
 
-fn test_one(infile:&Path) {
+fn test_one(infile:&Path, extra_args: &[&str]) {
 	let orig = NamedTempFile::new().expect("");
 	let orig = orig.path();
 	let orig_png = orig.with_extension("png");
@@ -34,6 +34,7 @@ fn test_one(infile:&Path) {
 	let output_inflate = Command::new(PROGRAM_EXE)
 		.arg(&orig_png)
 		.arg(&clean_png)
+		.args(extra_args)
 		.output()
 		.expect("failed to execute png_inflate process");
 	assert!(output_inflate.status.success(), "png_inflate execution was not success\n\n-- stderr:\n{}\n", std::str::from_utf8(&output_inflate.stderr).expect(""));
@@ -57,4 +58,5 @@ fn test_one(infile:&Path) {
 	::std::fs::remove_file(&clean_sng).expect("could not delete temporary files");
 }
 
-for_each_valid_file!(test_one);
+for_each_valid_file!(test_one, &[]);
+for_each_unsafecopy_file!(test_one, &["--copy-unsafe"]);

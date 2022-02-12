@@ -13,19 +13,21 @@ const PROGRAM_EXE:&str = env!("CARGO_BIN_EXE_png_inflate");
 
 generate_for_each_files!();
 
-fn test_one(infile:&Path) {
+fn test_one(infile:&Path, extra_args: &[&str]) {
 	let out1file = NamedTempFile::new().expect("").into_temp_path();
 	let out2file = NamedTempFile::new().expect("").into_temp_path();
 
 	let output1 = Command::new(PROGRAM_EXE)
 		.arg(&infile)
 		.arg(&out1file)
+		.args(extra_args)
 		.output()
 		.expect("failed to execute first subprocess");
 	assert!(output1.status.success(), "first subprocess execution was not success\n\n-- stderr1:\n{}\n", std::str::from_utf8(&output1.stderr).expect(""));
 	let output2 = Command::new(PROGRAM_EXE)
 		.arg(&out1file)
 		.arg(&out2file)
+		.args(extra_args)
 		.output()
 		.expect("failed to execute second process");
 	assert!(output2.status.success(), "second subprocess execution was not success\n\n-- stderr1:\n{}\n\n-- stderr2:\n{}\n", std::str::from_utf8(&output1.stderr).expect(""), std::str::from_utf8(&output2.stderr).expect(""));
@@ -35,5 +37,6 @@ fn test_one(infile:&Path) {
 	assert_eq!(res1, res2);
 }
 
-for_each_valid_file!(test_one);
-for_each_otherinvalid_file!(test_one);
+for_each_valid_file!(test_one, &[]);
+for_each_otherinvalid_file!(test_one, &[]);
+for_each_unsafecopy_file!(test_one, &["--copy-unsafe"]);

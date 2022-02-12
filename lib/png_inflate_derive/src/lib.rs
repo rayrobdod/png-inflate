@@ -39,6 +39,8 @@ fn case_template(case: &Path) -> TokenStream {
 					Delimiter::Parenthesis,
 					tokens![TokenTree::Literal(casevalue),]
 				)),
+				TokenTree::Punct(Punct::new(',', Spacing::Alone)),
+				"$( $args ),*".parse::<TokenStream>().unwrap(),
 			]
 		)),
 	];
@@ -61,7 +63,7 @@ fn macro_template(name: &str, cases: &[PathBuf]) -> TokenStream {
 		TokenTree::Group(Group::new(
 			Delimiter::Brace,
 			tokens![
-				"($body:ident) =>".parse::<TokenStream>().unwrap(),
+				"($body:ident, $( $args:expr ),* ) =>".parse::<TokenStream>().unwrap(),
 				TokenTree::Group(Group::new(
 					Delimiter::Brace,
 					tokens![cases
@@ -79,15 +81,18 @@ fn macro_template(name: &str, cases: &[PathBuf]) -> TokenStream {
 /// tests directories and which call the supplied path -> unit method.
 #[proc_macro]
 pub fn generate_for_each_files(_input: TokenStream) -> TokenStream {
-	let pngsuite_dir = ::std::env::current_dir()
+	let tests_dir = ::std::env::current_dir()
 		.expect("")
 		.join("tests")
-		.join("PngSuite");
+		;
+
+	let pngsuite_dir = tests_dir.join("PngSuite");
 
 	let mut cases_valid: Vec<PathBuf> = Vec::new();
 	let mut cases_badmagic: Vec<PathBuf> = Vec::new();
 	let mut cases_badchecksum: Vec<PathBuf> = Vec::new();
 	let mut cases_otherinvalid: Vec<PathBuf> = Vec::new(); // cases that are invalid, but not in a way that png_inflate cares about
+	let mut cases_unsafecopy: Vec<PathBuf> = Vec::new();
 
 	if let Ok(entries) = ::std::fs::read_dir(pngsuite_dir) {
 		for entry in entries {
@@ -115,10 +120,15 @@ pub fn generate_for_each_files(_input: TokenStream) -> TokenStream {
 		panic!("Could not read pngsuite directory");
 	}
 
+	cases_unsafecopy.push(tests_dir.join("apng_twoframe.png"));
+	cases_valid.push(tests_dir.join("with_custom_safe_to_copy_chunk.png"));
+	cases_unsafecopy.push(tests_dir.join("with_custom_unsafe_to_copy_chunk.png"));
+
 	tokens![
 		macro_template("for_each_valid_file", &cases_valid),
 		macro_template("for_each_badmagic_file", &cases_badmagic),
 		macro_template("for_each_badchecksum_file", &cases_badchecksum),
 		macro_template("for_each_otherinvalid_file", &cases_otherinvalid),
+		macro_template("for_each_unsafecopy_file", &cases_unsafecopy),
 	]
 }

@@ -12,7 +12,7 @@ const PROGRAM_EXE:&str = env!("CARGO_BIN_EXE_png_inflate");
 
 generate_for_each_files!();
 
-fn test_one(infile:&Path) {
+fn test_one(infile:&Path, extra_args: &[&str]) {
 	let outfile = NamedTempFile::new().expect("");
 
 	let initial_size = if Some(::std::ffi::OsStr::new("PngSuite.png")) == infile.file_name() {200000} else {12 * 1024};
@@ -23,6 +23,7 @@ fn test_one(infile:&Path) {
 	let output = Command::new(PROGRAM_EXE)
 		.arg(&infile)
 		.arg(&outfile)
+		.args(extra_args)
 		.output()
 		.expect("failed to execute subprocess");
 	assert!(output.status.success(), "subprocess execution was not success\n\n-- stderr:\n{}\n", std::str::from_utf8(&output.stderr).expect(""));
@@ -30,5 +31,6 @@ fn test_one(infile:&Path) {
 	assert!(outfile.metadata().expect("").len() < initial_size, "outfile was not shrunk: {}", outfile.metadata().expect("").len());
 }
 
-for_each_valid_file!(test_one);
-for_each_otherinvalid_file!(test_one);
+for_each_valid_file!(test_one, &[]);
+for_each_otherinvalid_file!(test_one, &[]);
+for_each_unsafecopy_file!(test_one, &["--copy-unsafe"]);
