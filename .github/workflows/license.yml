@@ -1,0 +1,13 @@
+name: Check Licenses
+on: [push]
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get cargo-license
+      run: 'cargo install cargo-license'
+    - uses: actions/checkout@v1
+    - name: Check licenses
+      run: >
+         cargo license --tsv |
+         awk -e 'BEGIN {FS="\t"} $5 != "license" && $5 != "Apache-2.0" && $5 != "MIT" && $5 != "BSD-3-Clause" && $5 != "Apache-2.0 OR MIT" { exit 3 }'

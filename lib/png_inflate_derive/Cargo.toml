@@ -4,8 +4,9 @@ version = "0.0.0-SNAPSHOT"
 authors = [
     "Raymond Dodge <git@rayrobdod.name>"
 ]
-edition = "2018"
+edition = "2021"
 publish = false
+license = "Apache-2.0"
 
 [lib]
 proc-macro = true
