@@ -1,43 +1,50 @@
 name: Build
 on: [push]
 jobs:
-  ubuntu-debug:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      matrix:
+        mode: [ debug , release ]
+        os: [ ubuntu, windows ]
+        include:
+         - mode: debug
+           mode_flag: ""
+         - mode: release
+           mode_flag: "--release"
+         - os: ubuntu
+           exe_suffix: ""
+           sng: /usr/bin/sng
+         - os: windows
+           exe_suffix: .exe
+           sng: C:\tools\cygwin\bin\sng.exe
+    env:
+      SNG: ${{ matrix.sng }}
+    runs-on: ${{ matrix.os }}-latest
+    name:  ${{ matrix.os }}-${{ matrix.mode }}
     steps:
-    - uses: actions/checkout@v1
-    - name: Build
-      run: cargo build --verbose
-    - uses: actions/upload-artifact@master
-      with:
-        name: png_inflate-debug
-        path: target/debug/png_inflate
-  ubuntu-release:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Build
-      run: cargo build --verbose --release
-    - uses: actions/upload-artifact@master
-      with:
-        name: png_inflate
-        path: target/release/png_inflate
-  windows-debug:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Build
-      run: cargo build --verbose
-    - uses: actions/upload-artifact@master
-      with:
-        name: png_inflate-debug.exe
-        path: target/debug/png_inflate.exe
-  windows-release:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Build
-      run: cargo build --verbose --release
-    - uses: actions/upload-artifact@master
-      with:
-        name: png_inflate.exe
-        path: target/release/png_inflate.exe
+     - uses: actions/checkout@v3
+     - name: Cache cargo registry
+       uses: actions/cache@v3
+       with:
+         path: ~/.cargo/registry/
+         key: cargo-${{ matrix.os }}-${{ hashFiles('**/Cargo.lock') }}
+         restore-keys: |
+           cargo-${{ matrix.os }}-
+     - name: Build
+       run: cargo build --verbose ${{ matrix.mode_flag }}
+     - uses: actions/upload-artifact@master
+       with:
+         name: png_inflate-${{ matrix.os }}-${{ matrix.mode }}${{ matrix.exe_suffix }}
+         path: target/${{ matrix.mode }}/png_inflate${{ matrix.exe_suffix }}
+     #
+     - name: Install test dependencies (ubuntu)
+       if: ${{ matrix.os == 'ubuntu' }}
+       run: sudo apt-get -yq install sng
+     - name: Install test dependencies (Windows)
+       if: ${{ matrix.os == 'windows' }}
+       shell: pwsh
+       run: |
+         & choco install Cygwin
+         & C:\tools\cygwin\cygwinsetup.exe --no-admin -q -P sng
+     - name: Run tests
+       run: cargo test --verbose ${{matrix.mode_flag}}
