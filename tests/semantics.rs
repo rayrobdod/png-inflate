@@ -1,20 +1,20 @@
 //! For each valid test case, asserts that the dut creates semantically-identical files
 
-extern crate tempfile;
 extern crate png_inflate_derive;
+extern crate tempfile;
 
-use ::std::fs::read;
-use ::std::path::Path;
-use ::std::process::Command;
-use tempfile::NamedTempFile;
 use png_inflate_derive::generate_for_each_files;
+use std::fs::read;
+use std::path::Path;
+use std::process::Command;
+use tempfile::NamedTempFile;
 
-const PROGRAM_EXE:&str = env!("CARGO_BIN_EXE_png_inflate");
-const SNG_EXE:&str = env!("SNG");
+const PROGRAM_EXE: &str = env!("CARGO_BIN_EXE_png_inflate");
+const SNG_EXE: &str = env!("SNG");
 
 generate_for_each_files!();
 
-fn test_one(infile:&Path, extra_args: &[&str]) {
+fn test_one(infile: &Path, extra_args: &[&str]) {
 	let orig = NamedTempFile::new().expect("");
 	let orig = orig.path();
 	let orig_png = orig.with_extension("png");
@@ -30,19 +30,31 @@ fn test_one(infile:&Path, extra_args: &[&str]) {
 		.arg(&orig_png)
 		.output()
 		.expect("failed to execute sng on original");
-	assert!(output_sng_orig.status.success(), "sng on original execution was not success\n\n-- stderr:\n{}\n", std::str::from_utf8(&output_sng_orig.stderr).expect(""));
+	assert!(
+		output_sng_orig.status.success(),
+		"sng on original execution was not success\n\n-- stderr:\n{}\n",
+		std::str::from_utf8(&output_sng_orig.stderr).expect("")
+	);
 	let output_inflate = Command::new(PROGRAM_EXE)
 		.arg(&orig_png)
 		.arg(&clean_png)
 		.args(extra_args)
 		.output()
 		.expect("failed to execute png_inflate process");
-	assert!(output_inflate.status.success(), "png_inflate execution was not success\n\n-- stderr:\n{}\n", std::str::from_utf8(&output_inflate.stderr).expect(""));
+	assert!(
+		output_inflate.status.success(),
+		"png_inflate execution was not success\n\n-- stderr:\n{}\n",
+		std::str::from_utf8(&output_inflate.stderr).expect("")
+	);
 	let output_sng_clean = Command::new(SNG_EXE)
 		.arg(&clean_png)
 		.output()
 		.expect("failed to execute sng on clean");
-	assert!(output_sng_clean.status.success(), "sng on original clean was not success\n\n-- stderr:\n{}\n", std::str::from_utf8(&output_sng_clean.stderr).expect(""));
+	assert!(
+		output_sng_clean.status.success(),
+		"sng on original clean was not success\n\n-- stderr:\n{}\n",
+		std::str::from_utf8(&output_sng_clean.stderr).expect("")
+	);
 
 	let res_orig = read(&orig_sng).expect("could not read orig.sng");
 	let res_orig = ::std::str::from_utf8(&res_orig).expect("could not read orig.sng");

@@ -6,18 +6,18 @@ mod zlib;
 
 use self::file_or_stdio::FileOrStdin;
 use self::file_or_stdio::FileOrStdout;
-use ::std::result::Result;
+use std::result::Result;
 
-const PROGRAM_NAME:&str = env!("CARGO_PKG_NAME");
-const PROGRAM_VERSION:&str = env!("CARGO_PKG_VERSION");
-const PROGRAM_HOMEPAGE:&str = env!("CARGO_PKG_HOMEPAGE");
-const PROGRAM_DESCRIPTION:&str = env!("CARGO_PKG_DESCRIPTION");
+const PROGRAM_NAME: &str = env!("CARGO_PKG_NAME");
+const PROGRAM_VERSION: &str = env!("CARGO_PKG_VERSION");
+const PROGRAM_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
+const PROGRAM_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
 fn main() {
 	let args = ::std::env::args().fold(Args::default(), |fold, item| fold.push(&item));
 
 	if args.help {
-		Args::print_usage(& args.program_name.unwrap_or_else(|| "".to_string()));
+		Args::print_usage(&args.program_name.unwrap_or_else(|| "".to_string()));
 		::std::process::exit(0);
 	}
 
@@ -37,24 +37,29 @@ fn main() {
 
 	match input {
 		Result::Ok(indata) => {
-			let outdata:Result<Vec<png::Chunk>, Error> = indata.iter().cloned().concat_idats().map(|x| deflate_chunks(x, ignore_unsafe_to_copy)).collect();
+			let outdata: Result<Vec<png::Chunk>, Error> = indata
+				.iter()
+				.cloned()
+				.concat_idats()
+				.map(|x| deflate_chunks(x, ignore_unsafe_to_copy))
+				.collect();
 
 			match outdata {
 				Result::Ok(outdata) => {
 					match outfile.write(|f| png::write(f, outdata)) {
 						Result::Ok(()) => {
 							// Ok
-						}
+						},
 						Result::Err(x) => {
 							eprintln!("Could not write: {}", x);
 							::std::process::exit(1);
-						}
+						},
 					}
-				}
+				},
 				Result::Err(x) => {
 					eprintln!("Could not transform: {:?}", x);
 					::std::process::exit(1);
-				}
+				},
 			}
 		},
 		Result::Err(x) => {
@@ -65,18 +70,19 @@ fn main() {
 }
 
 #[derive(Debug)]
-enum Error{
+enum Error {
 	CannotCopySafely,
 	UnsupportedCompressionMethod,
 	ZlibError(zlib::InflateError),
 }
 
 impl From<zlib::InflateError> for Error {
-	fn from(src: zlib::InflateError) -> Error { Error::ZlibError(src) }
+	fn from(src: zlib::InflateError) -> Error {
+		Error::ZlibError(src)
+	}
 }
 
-
-fn deflate_chunks(indata:png::Chunk, ignore_unsafe_to_copy:bool) -> Result<png::Chunk, Error> {
+fn deflate_chunks(indata: png::Chunk, ignore_unsafe_to_copy: bool) -> Result<png::Chunk, Error> {
 	match indata.typ.as_ref() {
 		// Not compressed, but contains data that can be validated
 		b"IHDR" => {
@@ -89,22 +95,28 @@ fn deflate_chunks(indata:png::Chunk, ignore_unsafe_to_copy:bool) -> Result<png::
 			}
 		},
 		// Contains only compressed data
-		b"IDAT" => {
-			Ok(png::Chunk{
-				typ : *b"IDAT",
-				data : zlib::deflate_immediate(&zlib::inflate(&indata.data)?),
-			})
-		},
+		b"IDAT" => Ok(png::Chunk {
+			typ: *b"IDAT",
+			data: zlib::deflate_immediate(&zlib::inflate(&indata.data)?),
+		}),
 		// Contains a cstring, followed by a method flag, followed by compressed data
 		b"zTXt" | b"iCCP" => {
 			let mut iter = indata.data.iter().cloned();
-			let keyword:Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
+			let keyword: Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
 			let method = iter.next();
 			if Some(0) == method {
-				let value:Vec<u8> = iter.collect();
+				let value: Vec<u8> = iter.collect();
 				let value = zlib::deflate_immediate(&zlib::inflate(&value)?);
-				let newdata = keyword.iter().chain([0, 0].iter()).chain(value.iter()).cloned().collect();
-				Ok(png::Chunk{ typ : indata.typ, data : newdata, })
+				let newdata = keyword
+					.iter()
+					.chain([0, 0].iter())
+					.chain(value.iter())
+					.cloned()
+					.collect();
+				Ok(png::Chunk {
+					typ: indata.typ,
+					data: newdata,
+				})
 			} else {
 				Err(Error::UnsupportedCompressionMethod)
 			}
@@ -112,25 +124,43 @@ fn deflate_chunks(indata:png::Chunk, ignore_unsafe_to_copy:bool) -> Result<png::
 		// Contains a: cstring, byte flag, byte flag, cstring, cstring, compressed data
 		b"iTXt" => {
 			let mut iter = indata.data.iter().cloned();
-			let keyword:Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
+			let keyword: Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
 			let is_compressed = iter.next();
 			if Some(0) == is_compressed {
 				// Not compressed, so make no changes
-				let newdata:Vec<u8> = keyword.iter().cloned().chain(std::iter::repeat(0).take(2)).chain(iter).collect();
-				Ok(png::Chunk{ typ : indata.typ, data : newdata, })
+				let newdata: Vec<u8> = keyword
+					.iter()
+					.cloned()
+					.chain(std::iter::repeat(0).take(2))
+					.chain(iter)
+					.collect();
+				Ok(png::Chunk {
+					typ: indata.typ,
+					data: newdata,
+				})
 			} else {
 				let method = iter.next();
 				if Some(0) == method {
-					let language:Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
-					let translated_keyword:Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
-					let value:Vec<u8> = iter.collect();
+					let language: Vec<u8> = iter.by_ref().take_while(|x| *x != 0).collect();
+					let translated_keyword: Vec<u8> =
+						iter.by_ref().take_while(|x| *x != 0).collect();
+					let value: Vec<u8> = iter.collect();
 					let value = zlib::deflate_immediate(&zlib::inflate(&value)?);
 
-					let newdata:Vec<u8> = keyword.iter().cloned().chain([0, 1, 0].iter().cloned())
-							.chain(language.iter().cloned()).chain(std::iter::once(0))
-							.chain(translated_keyword.iter().cloned()).chain(std::iter::once(0))
-							.chain(value.iter().cloned()).collect();
-					Ok(png::Chunk{ typ : indata.typ, data : newdata, })
+					let newdata: Vec<u8> = keyword
+						.iter()
+						.cloned()
+						.chain([0, 1, 0].iter().cloned())
+						.chain(language.iter().cloned())
+						.chain(std::iter::once(0))
+						.chain(translated_keyword.iter().cloned())
+						.chain(std::iter::once(0))
+						.chain(value.iter().cloned())
+						.collect();
+					Ok(png::Chunk {
+						typ: indata.typ,
+						data: newdata,
+					})
 				} else {
 					Err(Error::UnsupportedCompressionMethod)
 				}
@@ -151,16 +181,16 @@ fn deflate_chunks(indata:png::Chunk, ignore_unsafe_to_copy:bool) -> Result<png::
 			} else {
 				Err(Error::CannotCopySafely)
 			}
-		}
+		},
 	}
 }
 
 /// An iterator transformer that merges sequential IDATs, but otherwise passes through chunks
-struct ConcatinateIdats <I: Iterator<Item=png::Chunk>> {
+struct ConcatinateIdats<I: Iterator<Item = png::Chunk>> {
 	backing: ::std::iter::Peekable<I>,
 }
 
-impl <I: Iterator<Item=png::Chunk>> Iterator for ConcatinateIdats<I> {
+impl<I: Iterator<Item = png::Chunk>> Iterator for ConcatinateIdats<I> {
 	type Item = png::Chunk;
 	fn next(&mut self) -> Option<png::Chunk> {
 		match self.backing.next() {
@@ -171,44 +201,52 @@ impl <I: Iterator<Item=png::Chunk>> Iterator for ConcatinateIdats<I> {
 					while self.backing.peek().map(|x| x.typ) == Some(*b"IDAT") {
 						retval_data.extend_from_slice(&self.backing.next().unwrap().data);
 					}
-					Some(png::Chunk{
-						typ : *b"IDAT",
+					Some(png::Chunk {
+						typ: *b"IDAT",
 						data: retval_data,
 					})
 				} else {
 					Some(sum)
 				}
-			}
+			},
 		}
 	}
 }
 
-impl <I: Iterator<Item=png::Chunk>> ConcatinateIdats<I> {
-	fn new(backing:I) -> ConcatinateIdats<I> { ConcatinateIdats {
-		backing : backing.peekable()
-	}}
+impl<I: Iterator<Item = png::Chunk>> ConcatinateIdats<I> {
+	fn new(backing: I) -> ConcatinateIdats<I> {
+		ConcatinateIdats {
+			backing: backing.peekable(),
+		}
+	}
 }
 
 trait IteratorExt {
-	fn concat_idats(self) -> ConcatinateIdats<Self> where Self:Sized + Iterator<Item=png::Chunk>;
+	fn concat_idats(self) -> ConcatinateIdats<Self>
+	where
+		Self: Sized + Iterator<Item = png::Chunk>;
 }
-impl <I: Sized + Iterator<Item=png::Chunk>> IteratorExt for I {
-	fn concat_idats(self) -> ConcatinateIdats<I> where Self:Sized + Iterator<Item=png::Chunk> { ConcatinateIdats::new(self) }
+impl<I: Sized + Iterator<Item = png::Chunk>> IteratorExt for I {
+	fn concat_idats(self) -> ConcatinateIdats<I>
+	where
+		Self: Sized + Iterator<Item = png::Chunk>,
+	{
+		ConcatinateIdats::new(self)
+	}
 }
-
 
 /// A representation of the program arguments
 #[derive(Debug, Default)]
 struct Args {
-	force_positional:bool,
+	force_positional: bool,
 
-	help:bool,
-	version:bool,
-	ignore_unsafe_to_copy:bool,
+	help: bool,
+	version: bool,
+	ignore_unsafe_to_copy: bool,
 
-	program_name:Option<String>,
-	input_file:Option<String>,
-	output_file:Option<String>,
+	program_name: Option<String>,
+	input_file: Option<String>,
+	output_file: Option<String>,
 }
 
 impl Args {
@@ -231,7 +269,7 @@ impl Args {
 
 	/// Decode arg, add the result to self, then return self.
 	/// Intended as the lambda in a Iter::fold invocation.
-	fn push(mut self, arg:&str) -> Args {
+	fn push(mut self, arg: &str) -> Args {
 		let arg_zeroth_char = arg.chars().nth(0).unwrap_or('\0');
 		if !self.force_positional && arg_zeroth_char == '-' {
 			if arg == "--" {
@@ -259,7 +297,6 @@ impl Args {
 		self
 	}
 }
-
 
 #[cfg(test)]
 mod tests {

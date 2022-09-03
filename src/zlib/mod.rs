@@ -10,11 +10,14 @@ mod deflate;
 /// A u2 representing a hint indicating the algorithm used when compressing
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum CompressionLevel {
-	Fastest, Fast, Slow, Slowest
+	Fastest,
+	Fast,
+	Slow,
+	Slowest,
 }
 
 impl From<CompressionLevel> for u8 {
-	fn from(src:CompressionLevel) -> u8 {
+	fn from(src: CompressionLevel) -> u8 {
 		/*
 		match src {
 			CompressionLevel::Fastest => 0 << 6,
@@ -27,21 +30,21 @@ impl From<CompressionLevel> for u8 {
 	}
 }
 
-
-
-
 /// Represents the zlib format header
 ///
 /// Assumes that the compression_method is 8 (deflate) and that has_dictionary is false.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 struct Header {
-	window_size_exponent:u4,
-	compression_level:CompressionLevel
+	window_size_exponent: u4,
+	compression_level: CompressionLevel,
 }
 
 impl Header {
-	fn new(window_size_exponent:u4, compression_level:CompressionLevel) -> Header {
-		Header{window_size_exponent, compression_level}
+	fn new(window_size_exponent: u4, compression_level: CompressionLevel) -> Header {
+		Header {
+			window_size_exponent,
+			compression_level,
+		}
 	}
 
 	#[allow(dead_code)]
@@ -49,7 +52,7 @@ impl Header {
 		1 << (8 + u8::from(self.window_size_exponent))
 	}
 
-	fn read(val:u16) -> Result<Header, InflateError> {
+	fn read(val: u16) -> Result<Header, InflateError> {
 		if (val % 31) != 0 {
 			Err(InflateError::ChecksumMismatchHeader)
 		} else {
@@ -65,7 +68,7 @@ impl Header {
 				1 => CompressionLevel::Fast,
 				2 => CompressionLevel::Slow,
 				3 => CompressionLevel::Slowest,
-				_ => panic!("")
+				_ => panic!(""),
 			};
 
 			if method != u4::_8 || dict {
@@ -89,9 +92,8 @@ impl Header {
 	}
 }
 
-
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum InflateError{
+pub enum InflateError {
 	UnexpectedEof,
 	ChecksumMismatchHeader,
 	UnsupportedHeader,
@@ -102,14 +104,18 @@ pub enum InflateError{
 }
 
 impl From<deflate::InflateError> for InflateError {
-	fn from(src: deflate::InflateError) -> InflateError { match src {
-		deflate::InflateError::UnexpectedEof => InflateError::UnexpectedEof,
-		deflate::InflateError::NonCompressedLengthInvalid => InflateError::DeflateNonCompressedLengthInvalid,
-		deflate::InflateError::InvalidBtype => InflateError::DeflateInvalidBtype,
-	}}
+	fn from(src: deflate::InflateError) -> InflateError {
+		match src {
+			deflate::InflateError::UnexpectedEof => InflateError::UnexpectedEof,
+			deflate::InflateError::NonCompressedLengthInvalid => {
+				InflateError::DeflateNonCompressedLengthInvalid
+			},
+			deflate::InflateError::InvalidBtype => InflateError::DeflateInvalidBtype,
+		}
+	}
 }
 
-fn option_to_eof_result<A>(a:Option<A>) -> Result<A, InflateError> {
+fn option_to_eof_result<A>(a: Option<A>) -> Result<A, InflateError> {
 	match a {
 		Some(x) => Ok(x),
 		None => Err(InflateError::UnexpectedEof),
@@ -117,9 +123,12 @@ fn option_to_eof_result<A>(a:Option<A>) -> Result<A, InflateError> {
 }
 
 /// Decompresses a zlib stream
-pub fn inflate(r : &[u8]) -> Result<Vec<u8>, InflateError> {
+pub fn inflate(r: &[u8]) -> Result<Vec<u8>, InflateError> {
 	let mut r = r.iter().cloned();
-	let _header = Header::read(u16::from_be_bytes([option_to_eof_result(r.next())?, option_to_eof_result(r.next())?]))?;
+	let _header = Header::read(u16::from_be_bytes([
+		option_to_eof_result(r.next())?,
+		option_to_eof_result(r.next())?,
+	]))?;
 	let result = deflate::inflate(&mut r)?;
 	let given_chksum = u32::from_be_bytes([
 		option_to_eof_result(r.next())?,
@@ -138,19 +147,22 @@ pub fn inflate(r : &[u8]) -> Result<Vec<u8>, InflateError> {
 }
 
 /// Store the the input in a zlib stream entirely using immediate mode
-pub fn deflate_immediate(r : &[u8]) -> Vec<u8> {
-	Header::new(u4::_7, CompressionLevel::Fastest).write().to_be_bytes().iter().cloned()
-			.chain(deflate::deflate_immediate(r.iter().cloned()))
-			.chain(adler32(r).to_be_bytes().iter().cloned())
-			.collect()
+pub fn deflate_immediate(r: &[u8]) -> Vec<u8> {
+	Header::new(u4::_7, CompressionLevel::Fastest)
+		.write()
+		.to_be_bytes()
+		.iter()
+		.cloned()
+		.chain(deflate::deflate_immediate(r.iter().cloned()))
+		.chain(adler32(r).to_be_bytes().iter().cloned())
+		.collect()
 }
 
-
 /// Computes an adler 32 checksum
-fn adler32(input:&[u8]) -> u32 {
-	const DIVISOR:u32 = 65521;
-	let mut s1:u32 = 1;
-	let mut s2:u32 = 0;
+fn adler32(input: &[u8]) -> u32 {
+	const DIVISOR: u32 = 65521;
+	let mut s1: u32 = 1;
+	let mut s2: u32 = 0;
 
 	for x in input {
 		s1 += u32::from(*x);
@@ -162,71 +174,70 @@ fn adler32(input:&[u8]) -> u32 {
 	(s2 << 16) | s1
 }
 
-
-
 #[cfg(test)]
 mod tests {
 	mod header_write {
-		use super::super::Header;
 		use super::super::u4;
 		use super::super::CompressionLevel;
+		use super::super::Header;
 
 		#[test]
 		fn default() {
-			let exp:u16 = 0x6881;
-			let dut:Header = Header::new(u4::_6, CompressionLevel::Slow);
+			let exp: u16 = 0x6881;
+			let dut: Header = Header::new(u4::_6, CompressionLevel::Slow);
 			let res = dut.write();
-			assert!( exp == res, "{:x} != {:x}", exp, res );
+			assert!(exp == res, "{:x} != {:x}", exp, res);
 		}
 		#[test]
 		fn fastest() {
-			let exp:u16 = 0x7801;
-			let dut:Header = Header::new(u4::_7, CompressionLevel::Fastest);
+			let exp: u16 = 0x7801;
+			let dut: Header = Header::new(u4::_7, CompressionLevel::Fastest);
 			let res = dut.write();
-			assert!( exp == res, "{:x} != {:x}", exp, res );
+			assert!(exp == res, "{:x} != {:x}", exp, res);
 		}
 	}
 
 	mod header_read {
-		use super::super::Header;
 		use super::super::u4;
 		use super::super::CompressionLevel;
+		use super::super::Header;
 		use super::super::InflateError;
 
 		#[test]
 		fn default() {
-			let exp:Result<Header, InflateError> = Ok(Header::new(u4::_6, CompressionLevel::Slow));
-			let dut:u16 = 0x6881;
+			let exp: Result<Header, InflateError> = Ok(Header::new(u4::_6, CompressionLevel::Slow));
+			let dut: u16 = 0x6881;
 			let res = Header::read(dut);
-			assert!( exp == res, "{:?} != {:?}", exp, res );
+			assert!(exp == res, "{:?} != {:?}", exp, res);
 		}
 		#[test]
 		fn fastest() {
-			let exp:Result<Header, InflateError> = Ok(Header::new(u4::_7, CompressionLevel::Fastest));
-			let dut:u16 = 0x7801;
+			let exp: Result<Header, InflateError> =
+				Ok(Header::new(u4::_7, CompressionLevel::Fastest));
+			let dut: u16 = 0x7801;
 			let res = Header::read(dut);
-			assert!( exp == res, "{:?} != {:?}", exp, res );
+			assert!(exp == res, "{:?} != {:?}", exp, res);
 		}
 		#[test]
 		fn invalid_checksum_fails() {
-			let exp:Result<Header, InflateError> = Err(InflateError::ChecksumMismatchHeader);
-			let dut:u16 = 0x6882;
+			let exp: Result<Header, InflateError> = Err(InflateError::ChecksumMismatchHeader);
+			let dut: u16 = 0x6882;
 			let res = Header::read(dut);
-			assert!( exp == res, "{:?} != {:?}", exp, res );
+			assert!(exp == res, "{:?} != {:?}", exp, res);
 		}
 		#[test]
 		fn has_dict_fails() {
-			let exp:Result<Header, InflateError> = Err(InflateError::UnsupportedHeader);
-			let dut:u16 = 0x68A0;
+			let exp: Result<Header, InflateError> = Err(InflateError::UnsupportedHeader);
+			let dut: u16 = 0x68A0;
 			let res = Header::read(dut);
-			assert!( exp == res, "{:?} != {:?}", exp, res );
+			assert!(exp == res, "{:?} != {:?}", exp, res);
 		}
 		#[test]
 		fn method_not_deflate_fails() {
-			let exp:Result<Header, InflateError> = Err(InflateError::UnsupportedHeader);
-			let dut:u16 = 0x6599;
+			let exp: Result<Header, InflateError> = Err(InflateError::UnsupportedHeader);
+			let dut: u16 = 0x6599;
 			let res = Header::read(dut);
-			assert!( exp == res, "{:?} != {:?}", exp, res );
+			assert!(exp == res, "{:?} != {:?}", exp, res);
 		}
 	}
 

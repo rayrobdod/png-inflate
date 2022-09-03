@@ -63,7 +63,9 @@ fn macro_template(name: &str, cases: &[PathBuf]) -> TokenStream {
 		TokenTree::Group(Group::new(
 			Delimiter::Brace,
 			tokens![
-				"($body:ident, $( $args:expr ),* ) =>".parse::<TokenStream>().unwrap(),
+				"($body:ident, $( $args:expr ),* ) =>"
+					.parse::<TokenStream>()
+					.unwrap(),
 				TokenTree::Group(Group::new(
 					Delimiter::Brace,
 					tokens![cases
@@ -81,10 +83,7 @@ fn macro_template(name: &str, cases: &[PathBuf]) -> TokenStream {
 /// tests directories and which call the supplied path -> unit method.
 #[proc_macro]
 pub fn generate_for_each_files(_input: TokenStream) -> TokenStream {
-	let tests_dir = ::std::env::current_dir()
-		.expect("")
-		.join("tests")
-		;
+	let tests_dir = ::std::env::current_dir().expect("").join("tests");
 
 	let pngsuite_dir = tests_dir.join("PngSuite");
 

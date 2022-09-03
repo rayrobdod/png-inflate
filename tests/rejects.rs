@@ -1,18 +1,18 @@
 //! Checks that files that should be rejected are rejected
 
-extern crate tempfile;
 extern crate png_inflate_derive;
+extern crate tempfile;
 
-use ::std::path::Path;
-use ::std::process::Command;
-use tempfile::NamedTempFile;
 use png_inflate_derive::generate_for_each_files;
+use std::path::Path;
+use std::process::Command;
+use tempfile::NamedTempFile;
 
-const PROGRAM_EXE:&str = env!("CARGO_BIN_EXE_png_inflate");
+const PROGRAM_EXE: &str = env!("CARGO_BIN_EXE_png_inflate");
 
 generate_for_each_files!();
 
-fn test_one(infile:&Path, extra_args: &[&str]) {
+fn test_one(infile: &Path, extra_args: &[&str]) {
 	let outfile = NamedTempFile::new().expect("");
 	let outfile = outfile.into_temp_path();
 
@@ -22,9 +22,17 @@ fn test_one(infile:&Path, extra_args: &[&str]) {
 		.args(extra_args)
 		.output()
 		.expect("failed to execute subprocess");
-	assert!(!output.status.success(), "subprocess execution should not have been success\n\n-- stderr:\n{}\n", std::str::from_utf8(&output.stderr).expect(""));
+	assert!(
+		!output.status.success(),
+		"subprocess execution should not have been success\n\n-- stderr:\n{}\n",
+		std::str::from_utf8(&output.stderr).expect("")
+	);
 	// TODO: check the message?
-	assert!(outfile.metadata().expect("").len() == 0, "outfile was written to: {}", outfile.metadata().expect("").len());
+	assert!(
+		outfile.metadata().expect("").len() == 0,
+		"outfile was written to: {}",
+		outfile.metadata().expect("").len()
+	);
 }
 
 for_each_badmagic_file!(test_one, &[]);
