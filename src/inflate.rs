@@ -137,10 +137,13 @@ fn deflate_chunks(indata:png::Chunk, ignore_unsafe_to_copy:bool) -> Result<png::
 			}
 		},
 		// Contain no compression, and are not affected by compression details of other chunks
+		#[rustfmt::skip]
 		b"PLTE" | b"IEND" | b"tRNS" | b"cHRM" | b"gAMA" |
 		b"sBIT" | b"sRGB" | b"tEXt" | b"bKGD" | b"hIST" |
 		b"pHYs" | b"sPLT" | b"tIME" | b"oFFs" | b"pCAL" |
-		b"sCAL" | b"gIFg" | b"gIFx" | b"gIFt" | b"eXIf" => Ok(indata),
+		b"sCAL" | b"gIFg" | b"gIFx" | b"gIFt" | b"eXIf" => {
+			Ok(indata)
+		},
 		// unknown chunks
 		_ => {
 			if ignore_unsafe_to_copy || indata.safe_to_copy() {
@@ -210,6 +213,7 @@ struct Args {
 
 impl Args {
 	/// Print to stdout a usage statement for a program with this set of arguments
+	#[rustfmt::skip]
 	fn print_usage(program_name:&str) {
 		#![allow(clippy::print_literal)]
 		// hardcoded, but kept close to the rest of the argument data so that hopefully
@@ -263,6 +267,7 @@ mod tests {
 		use super::super::png;
 		use super::super::IteratorExt;
 
+		#[rustfmt::skip]
 		#[test]
 		fn concatinates_conecutive_idats() {
 			let data = [
@@ -274,6 +279,7 @@ mod tests {
 			assert!(dut.next().is_none());
 		}
 
+		#[rustfmt::skip]
 		#[test]
 		fn does_not_merge_consecutive_nonidats() {
 			let data = [
@@ -286,6 +292,7 @@ mod tests {
 			assert!(dut.next().is_none());
 		}
 
+		#[rustfmt::skip]
 		#[test]
 		fn does_not_merge_disparate_chunks() {
 			let data = [

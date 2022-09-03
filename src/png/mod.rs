@@ -224,6 +224,7 @@ mod tests {
 
 		#[test]
 		fn ihdr_1() {
+			#[rustfmt::skip]
 			let val:[u8;17] = [
 				0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x01, 0x2c,
 				0x00, 0x00, 0x00, 0x96, 0x02, 0x03, 0x00, 0x00,
@@ -258,7 +259,9 @@ mod tests {
 
 		#[test]
 		fn exact_size() {
+			#[rustfmt::skip]
 			let exp = Some(Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]});
+			#[rustfmt::skip]
 			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B];
 			let res = Chunk::read(&mut dut).unwrap();
 			assert!( exp == res );
@@ -267,6 +270,7 @@ mod tests {
 
 		#[test]
 		fn reads_only_the_amount_needed() {
+			#[rustfmt::skip]
 			let exp = Some(Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]});
 			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B, 11, 22, 33, 44, 55];
 			let res = Chunk::read(&mut dut).unwrap();
@@ -348,11 +352,13 @@ mod tests {
 
 		#[test]
 		fn normal_case() {
+			#[rustfmt::skip]
 			let exp = vec![
 				Chunk{typ:*b"FIRS", data:vec![]},
 				Chunk{typ:*b"SECO", data:vec![]},
 				Chunk{typ:*b"THIR", data:vec![]},
 			];
+			#[rustfmt::skip]
 			let mut dut:&[u8] = &[
 				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
 				0, 0, 0, 0, b'F', b'I', b'R', b'S', 0x9A, 0x9F, 0x51, 0x2A,
@@ -366,11 +372,13 @@ mod tests {
 
 		#[test]
 		fn does_not_treat_iend_specially() {
+			#[rustfmt::skip]
 			let exp = vec![
 				Chunk{typ:*b"FIRS", data:vec![]},
 				Chunk{typ:*b"IEND", data:vec![]},
 				Chunk{typ:*b"THIR", data:vec![]},
 			];
+			#[rustfmt::skip]
 			let mut dut:&[u8] = &[
 				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
 				0, 0, 0, 0, b'F', b'I', b'R', b'S', 0x9A, 0x9F, 0x51, 0x2A,
@@ -384,6 +392,7 @@ mod tests {
 
 		#[test]
 		fn incomplete_chunk_1() {
+			#[rustfmt::skip]
 			let mut dut:&[u8] = &[
 				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
 				0,
@@ -394,6 +403,7 @@ mod tests {
 
 		#[test]
 		fn incomplete_chunk_2() {
+			#[rustfmt::skip]
 			let mut dut:&[u8] = &[
 				137, b'P', b'N', b'G', b'\r', b'\n', 26, b'\n',
 				0, 0,
@@ -404,6 +414,7 @@ mod tests {
 
 		#[test]
 		fn incorrect_magic() {
+			#[rustfmt::skip]
 			let mut dut:&[u8] = &[
 				138, b'M', b'N', b'G', b'\r', b'\n', 26, b'\n',
 			];
@@ -418,12 +429,14 @@ mod tests {
 		#[test]
 		fn tru() {
 			let exp:bool = true;
+			#[rustfmt::skip]
 			let res = Chunk{typ:*b"IDAt", data:vec![]}.safe_to_copy();
 			assert!( exp == res );
 		}
 		#[test]
 		fn fals() {
 			let exp:bool = false;
+			#[rustfmt::skip]
 			let res = Chunk{typ:*b"IDAT", data:vec![]}.safe_to_copy();
 			assert!( exp == res );
 		}

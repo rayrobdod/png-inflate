@@ -12,6 +12,7 @@
 
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[rustfmt::skip]
 /// Represents a four-bit number
 pub enum u4 {
 	_0, _1, _2, _3, _4, _5, _6, _7,
@@ -19,6 +20,7 @@ pub enum u4 {
 }
 
 impl u4 {
+	#[rustfmt::skip]
 	pub fn truncate(src:u8) -> u4 {
 		match src & 0xF {
 			0 => u4::_0, 1 => u4::_1, 2 => u4::_2, 3 => u4::_3,
@@ -29,6 +31,7 @@ impl u4 {
 		}
 	}
 
+	#[rustfmt::skip]
 	/// Returns a u16 with the value `2 ^^ self`
 	pub fn nth_bit(self) -> u16 {
 		match self {

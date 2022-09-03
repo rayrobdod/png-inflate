@@ -2,6 +2,7 @@
 use super::u4;
 use super::Bits;
 
+#[rustfmt::skip]
 /// The extra bits following a length code to store
 /// the actual value of the code
 const LENGTH_EXTRA_BITS:[u4;29] = [
@@ -13,6 +14,7 @@ const LENGTH_EXTRA_BITS:[u4;29] = [
 	u4::_5, u4::_5, u4::_5, u4::_0
 ];
 
+#[rustfmt::skip]
 /// The extra bits following a distance code to store
 /// the actual value of the code
 const DISTANCE_EXTRA_BITS:[u4;30] = [
@@ -24,6 +26,7 @@ const DISTANCE_EXTRA_BITS:[u4;30] = [
 	u4::_B, u4::_C, u4::_C, u4::_D, u4::_D,
 ];
 
+#[rustfmt::skip]
 /// The order that meta codes are stored in 10 mode codings
 const META_CODES_ORDER:[usize;19] = [
 	16, 17, 18, 0, 8,
@@ -325,6 +328,7 @@ mod tests {
 			}
 		}
 	}
+
 	mod dynamic_huffman_codes {
 		use super::super::DynamicHuffmanCodes;
 		use super::super::super::u4;
@@ -367,6 +371,7 @@ mod tests {
 		}
 		#[test]
 		fn provided_sample() {
+			#[rustfmt::skip]
 			let dut = [u4::_3, u4::_3, u4::_3, u4::_3, u4::_3, u4::_2, u4::_4, u4::_4];
 			let dut = DynamicHuffmanCodes::from_lengths(&dut);
 
@@ -385,8 +390,10 @@ mod tests {
 		use super::super::inflate;
 		#[test]
 		fn immediate_mode() {
-			let exp:[u8;10] = [1,2,3,4,5,6,7,8,9,10];
-			let dut:[u8;15] = [1, 10, 0, !10, 0xFF, 1,2,3,4,5,6,7,8,9,10];
+			#[rustfmt::skip]
+			let exp: [u8; 10] = [1,2,3,4,5,6,7,8,9,10];
+			#[rustfmt::skip]
+			let dut: [u8; 15] = [1, 10, 0, !10, 0xFF, 1,2,3,4,5,6,7,8,9,10];
 			let mut dut = dut.iter().cloned();
 			let res = inflate(&mut dut).unwrap();
 			assert!( exp == res.as_slice(), "{:?}", res );
@@ -409,21 +416,25 @@ mod tests {
 		}
 		#[test]
 		fn abcde_times_five() {
-			let exp:[u8;25] = [0x61, 0x62, 0x63, 0x64, 0x65, 0x61, 0x62, 0x63, 0x64, 0x65, 0x61, 0x62, 0x63, 0x64, 0x65, 0x61, 0x62, 0x63, 0x64, 0x65, 0x61, 0x62, 0x63, 0x64, 0x65];
-			let dut:[u8;9] = [0x4b, 0x4c, 0x4a, 0x4e, 0x49, 0xc5, 0x46, 0x00, 0x00];
+			#[rustfmt::skip]
+			let exp: [u8; 25] = [0x61, 0x62, 0x63, 0x64, 0x65, 0x61, 0x62, 0x63, 0x64, 0x65, 0x61, 0x62, 0x63, 0x64, 0x65, 0x61, 0x62, 0x63, 0x64, 0x65, 0x61, 0x62, 0x63, 0x64, 0x65];
+			#[rustfmt::skip]
+			let dut: [u8; 9] = [0x4b, 0x4c, 0x4a, 0x4e, 0x49, 0xc5, 0x46, 0x00, 0x00];
 			let mut dut = dut.iter().cloned();
 			let res = inflate(&mut dut).unwrap();
 			assert!( exp == res.as_slice(), "{:?}", res );
 		}
 		#[test]
 		fn black_square_4x4() {
-			let exp:[u8; 68] = [
+			#[rustfmt::skip]
+			let exp: [u8; 68] = [
 				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
 				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
 				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
 				0, 0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255,
 			];
-			let dut:[u8;21] = [0x9d, 0xc8, 0xb1, 0x0d, 0x00, 0x00, 0x00, 0x82, 0x30, 0xff, 0x7f, 0x5a, 0x1d, 0x99, 0x21, 0x61, 0x69, 0x5e, 0xb9, 0x80, 0x01];
+			#[rustfmt::skip]
+			let dut: [u8; 21] = [0x9d, 0xc8, 0xb1, 0x0d, 0x00, 0x00, 0x00, 0x82, 0x30, 0xff, 0x7f, 0x5a, 0x1d, 0x99, 0x21, 0x61, 0x69, 0x5e, 0xb9, 0x80, 0x01];
 			let mut dut = dut.iter().cloned();
 			let res = inflate(&mut dut).unwrap();
 			assert_eq!( exp.len(), res.len(), "LENGTH");
