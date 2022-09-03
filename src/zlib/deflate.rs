@@ -329,47 +329,55 @@ mod tests {
 		use super::super::DynamicHuffmanCodes;
 		use super::super::super::u4;
 		use super::super::super::Bits;
+
+		fn assert_decode(expected: u16, dut: &DynamicHuffmanCodes, huffman_code: u8) {
+			assert_eq!(
+				expected,
+				dut.decode(&mut Bits::new([huffman_code].iter().cloned())).unwrap()
+			);
+		}
+
 		#[test]
 		fn two_constant_length() {
 			let dut = [u4::_1, u4::_1];
 			let dut = DynamicHuffmanCodes::from_lengths(&dut);
 
-			assert_eq!( 0, dut.decode(&mut Bits::new([0b0u8].iter().cloned())).unwrap() );
-			assert_eq!( 1, dut.decode(&mut Bits::new([0b1u8].iter().cloned())).unwrap() );
+			assert_decode(0, &dut, 0b0u8);
+			assert_decode(1, &dut, 0b1u8);
 		}
 		#[test]
 		fn four_constant_length() {
 			let dut = [u4::_2, u4::_2, u4::_2, u4::_2];
 			let dut = DynamicHuffmanCodes::from_lengths(&dut);
 
-			assert_eq!( 0, dut.decode(&mut Bits::new([0b00u8].iter().cloned())).unwrap() );
-			assert_eq!( 1, dut.decode(&mut Bits::new([0b10u8].iter().cloned())).unwrap() );
-			assert_eq!( 2, dut.decode(&mut Bits::new([0b01u8].iter().cloned())).unwrap() );
-			assert_eq!( 3, dut.decode(&mut Bits::new([0b11u8].iter().cloned())).unwrap() );
+			assert_decode(0, &dut, 0b00u8);
+			assert_decode(1, &dut, 0b10u8);
+			assert_decode(2, &dut, 0b01u8);
+			assert_decode(3, &dut, 0b11u8);
 		}
 		#[test]
 		fn four_constant_delta() {
 			let dut = [u4::_1, u4::_2, u4::_3, u4::_4];
 			let dut = DynamicHuffmanCodes::from_lengths(&dut);
 
-			assert_eq!( 0, dut.decode(&mut Bits::new([0b000_0u8].iter().cloned())).unwrap() );
-			assert_eq!( 1, dut.decode(&mut Bits::new([0b00_01u8].iter().cloned())).unwrap() );
-			assert_eq!( 2, dut.decode(&mut Bits::new([0b0_011u8].iter().cloned())).unwrap() );
-			assert_eq!( 3, dut.decode(&mut Bits::new([0b_0111u8].iter().cloned())).unwrap() );
+			assert_decode(0, &dut, 0b000_0u8);
+			assert_decode(1, &dut, 0b00_01u8);
+			assert_decode(2, &dut, 0b0_011u8);
+			assert_decode(3, &dut, 0b_0111u8);
 		}
 		#[test]
 		fn provided_sample() {
 			let dut = [u4::_3, u4::_3, u4::_3, u4::_3, u4::_3, u4::_2, u4::_4, u4::_4];
 			let dut = DynamicHuffmanCodes::from_lengths(&dut);
 
-			assert_eq!( 5, dut.decode(&mut Bits::new([0b00_00u8].iter().cloned())).unwrap() );
-			assert_eq!( 0, dut.decode(&mut Bits::new([0b0_010u8].iter().cloned())).unwrap() );
-			assert_eq!( 1, dut.decode(&mut Bits::new([0b0_110u8].iter().cloned())).unwrap() );
-			assert_eq!( 2, dut.decode(&mut Bits::new([0b0_001u8].iter().cloned())).unwrap() );
-			assert_eq!( 3, dut.decode(&mut Bits::new([0b0_101u8].iter().cloned())).unwrap() );
-			assert_eq!( 4, dut.decode(&mut Bits::new([0b0_011u8].iter().cloned())).unwrap() );
-			assert_eq!( 6, dut.decode(&mut Bits::new([0b_0111u8].iter().cloned())).unwrap() );
-			assert_eq!( 7, dut.decode(&mut Bits::new([0b_1111u8].iter().cloned())).unwrap() );
+			assert_decode(5, &dut, 0b00_00u8);
+			assert_decode(0, &dut, 0b0_010u8);
+			assert_decode(1, &dut, 0b0_110u8);
+			assert_decode(2, &dut, 0b0_001u8);
+			assert_decode(3, &dut, 0b0_101u8);
+			assert_decode(4, &dut, 0b0_011u8);
+			assert_decode(6, &dut, 0b_0111u8);
+			assert_decode(7, &dut, 0b_1111u8);
 		}
 	}
 
