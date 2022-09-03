@@ -48,3 +48,11 @@ jobs:
          & C:\tools\cygwin\cygwinsetup.exe --no-admin -q -P sng
      - name: Run tests
        run: cargo test --verbose ${{matrix.mode_flag}}
+  check_fmt:
+    runs-on: ubuntu-latest
+    steps:
+     - uses: actions/checkout@v3
+     - name: cargo fmt
+       run: cargo fmt --all -- --check
+     - name: Check Sorted
+       run: 'sort --check -- rustfmt.toml'
