@@ -45,6 +45,8 @@ test_script:
 - cmd: 'cargo test %MODE%'
 - sh: 'cargo test $MODE'
 
+- ps: 'cargo fmt --all -- --check'
+
 - ps: './target/release/png_inflate --version'
 artifacts:
 - path: target\release\png_inflate.exe.gz
