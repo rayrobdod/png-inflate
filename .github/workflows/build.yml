@@ -56,3 +56,18 @@ jobs:
        run: cargo fmt --all -- --check
      - name: Check Sorted
        run: 'sort --check -- rustfmt.toml'
+  clippy_lint:
+    runs-on: ubuntu-latest
+    env:
+      SNG: 'arbitrary value'
+    steps:
+     - uses: actions/checkout@v3
+     - name: Cache cargo registry
+       uses: actions/cache@v3
+       with:
+         path: ~/.cargo/registry/
+         key: cargo-ubuntu-${{ hashFiles('**/Cargo.lock') }}
+         restore-keys: |
+           cargo-ubuntu-
+     - name: cargo clippy
+       run: cargo clippy --all-targets --all-features -- -D warnings

@@ -345,6 +345,8 @@ fn u16_reverse_bits(a: u16) -> u16 {
 	retval
 }
 
+// bits are intentionally grouped by huffman instruction, not by nibble
+#[allow(clippy::unusual_byte_groupings)]
 #[cfg(test)]
 mod tests {
 	mod decode_fixed_huffman_code {
@@ -361,8 +363,8 @@ mod tests {
 				res[usize::from(decode_fixed_huffman_code(&mut bits).unwrap())] = true;
 			}
 
-			for i in 0..288 {
-				assert!(res[i], "i = {}", i);
+			for (index, result_item_was_hit) in res.iter().enumerate() {
+				assert!(result_item_was_hit, "i = {}", index);
 			}
 		}
 	}

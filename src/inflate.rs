@@ -73,12 +73,12 @@ fn main() {
 enum Error {
 	CannotCopySafely,
 	UnsupportedCompressionMethod,
-	ZlibError(zlib::InflateError),
+	Zlib(zlib::InflateError),
 }
 
 impl From<zlib::InflateError> for Error {
 	fn from(src: zlib::InflateError) -> Error {
-		Error::ZlibError(src)
+		Error::Zlib(src)
 	}
 }
 
@@ -270,8 +270,10 @@ impl Args {
 	/// Decode arg, add the result to self, then return self.
 	/// Intended as the lambda in a Iter::fold invocation.
 	fn push(mut self, arg: &str) -> Args {
+		#[allow(clippy::iter_nth_zero)]
 		let arg_zeroth_char = arg.chars().nth(0).unwrap_or('\0');
 		if !self.force_positional && arg_zeroth_char == '-' {
+			// then the argument is a named argument
 			if arg == "--" {
 				self.force_positional = true;
 			} else if arg == "--copy-unsafe" || arg == "/copy-unsafe" {
@@ -284,6 +286,7 @@ impl Args {
 				panic!("Unknown flag");
 			}
 		} else {
+			// then the argument is a positional argument
 			if self.program_name == Option::None {
 				self.program_name = Option::Some(arg.to_string());
 			} else if self.input_file == Option::None {

@@ -59,15 +59,15 @@ impl Chunk {
 	/// Reads a PNG chunk from a data stream
 	fn read(file: &mut dyn Read) -> Result<Option<Chunk>, ChunkReadError> {
 		let mut size: [u8; 4] = [0, 0, 0, 0];
-		let (mut size_head, mut size_tail) = size.split_at_mut(1);
-		if let Err(e) = file.read_exact(&mut size_head) {
+		let (size_head, size_tail) = size.split_at_mut(1);
+		if let Err(e) = file.read_exact(size_head) {
 			if e.kind() == ErrorKind::UnexpectedEof {
 				return Ok(None);
 			} else {
 				return Err(ChunkReadError::Io(e));
 			}
 		}
-		file.read_exact(&mut size_tail)
+		file.read_exact(size_tail)
 			.map_err(ChunkReadError::Io)
 			.and_then(|_| {
 				let size = u32::from_be_bytes(size);
@@ -292,7 +292,7 @@ mod tests {
 			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B];
 			let res = Chunk::read(&mut dut).unwrap();
 			assert!(exp == res);
-			assert!(dut.len() == 0);
+			assert!(dut.is_empty());
 		}
 
 		#[test]
@@ -344,7 +344,7 @@ mod tests {
 			let mut dut: &[u8] = &[];
 			let res = Chunk::read(&mut dut).unwrap();
 			assert!(exp == res);
-			assert!(dut.len() == 0);
+			assert!(dut.is_empty());
 		}
 	}
 
@@ -399,7 +399,7 @@ mod tests {
 			];
 			let res = read(&mut dut).unwrap();
 			assert!(exp == res);
-			assert!(dut.len() == 0);
+			assert!(dut.is_empty());
 		}
 
 		#[test]
@@ -419,7 +419,7 @@ mod tests {
 			];
 			let res = read(&mut dut).unwrap();
 			assert!(exp == res);
-			assert!(dut.len() == 0);
+			assert!(dut.is_empty());
 		}
 
 		#[test]

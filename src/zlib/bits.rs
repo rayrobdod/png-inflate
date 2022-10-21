@@ -34,6 +34,7 @@ impl<I: Iterator<Item = u8>> Iterator for Bits<I> {
 
 impl<I: Iterator<Item = u8>> Bits<I> {
 	pub fn new(backing: I) -> Bits<I> {
+		#[allow(clippy::redundant_field_names)]
 		Bits {
 			backing: backing,
 			current_byte: 0,
@@ -79,6 +80,7 @@ mod tests {
 	mod read_1 {
 		use super::super::Bits;
 
+		#[allow(clippy::bool_comparison)]
 		#[test]
 		fn one_byte() {
 			let dut: [u8; 1] = [0b11010110];
