@@ -67,50 +67,45 @@ impl Chunk {
 				return Err(ChunkReadError::Io(e));
 			}
 		}
-		file.read_exact(size_tail)
-			.map_err(ChunkReadError::Io)
-			.and_then(|_| {
-				let size = u32::from_be_bytes(size);
+		if let Err(e) = file.read_exact(size_tail) {
+			return Err(ChunkReadError::Io(e));
+		}
+		let size = u32::from_be_bytes(size);
 
-				let mut typ: [u8; 4] = [0, 0, 0, 0];
-				file.read_exact(&mut typ)
-					.map_err(ChunkReadError::Io)
-					.and_then(|_| {
-						let typ = typ;
+		let mut typ: [u8; 4] = [0, 0, 0, 0];
+		if let Err(e) = file.read_exact(&mut typ) {
+			return Err(ChunkReadError::Io(e));
+		}
+		let typ = typ;
 
-						if !typ
-							.iter()
-							.all(|c| (0x41 <= *c && *c <= 0x5A) || (0x61 <= *c && *c <= 0x7A))
-						{
-							Err(ChunkReadError::InvalidTyp(typ))
-						} else {
-							let mut data: Vec<u8> = vec![0; u32_to_usize(size)];
-							file.read_exact(&mut data)
-								.map_err(ChunkReadError::Io)
-								.and_then(|_| {
-									let data = data;
+		if !typ
+			.iter()
+			.all(|c| (0x41 <= *c && *c <= 0x5A) || (0x61 <= *c && *c <= 0x7A))
+		{
+			return Err(ChunkReadError::InvalidTyp(typ));
+		}
 
-									let mut stated_crc: [u8; 4] = [0; 4];
-									file.read_exact(&mut stated_crc)
-										.map_err(ChunkReadError::Io)
-										.and_then(|_| {
-											let stated_crc = u32::from_be_bytes(stated_crc);
-											let cacluated_crc =
-												calculate_crc(typ.iter().chain(data.iter()));
+		let mut data: Vec<u8> = vec![0; u32_to_usize(size)];
+		if let Err(e) = file.read_exact(&mut data) {
+			return Err(ChunkReadError::Io(e));
+		}
+		let data = data;
 
-											if stated_crc == cacluated_crc {
-												Ok(Some(Chunk { typ, data }))
-											} else {
-												Err(ChunkReadError::CrcMismatch {
-													stated: stated_crc,
-													calculated: cacluated_crc,
-												})
-											}
-										})
-								})
-						}
-					})
-			})
+		let mut stated_crc: [u8; 4] = [0; 4];
+		if let Err(e) = file.read_exact(&mut stated_crc) {
+			return Err(ChunkReadError::Io(e));
+		}
+		let stated_crc = u32::from_be_bytes(stated_crc);
+		let calcuated_crc = calculate_crc(typ.iter().chain(data.iter()));
+
+		if stated_crc != calcuated_crc {
+			return Err(ChunkReadError::CrcMismatch {
+				stated: stated_crc,
+				calculated: calcuated_crc,
+			});
+		}
+
+		Ok(Some(Chunk { typ, data }))
 	}
 
 	/// Writes a PNG chunk to a data stream
@@ -306,6 +301,26 @@ mod tests {
 			let res = Chunk::read(&mut dut).unwrap();
 			assert!(exp == res);
 			assert!(dut.len() == 5);
+		}
+
+		#[test]
+		fn errors_if_unexpected_crc() {
+			let mut dut: &[u8] = &[
+				0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 1, 2, 3, 4,
+			];
+			match Chunk::read(&mut dut) {
+				Err(ChunkReadError::CrcMismatch { stated, calculated }) => {
+					if 0x01020304 != stated || 0x75887C4B != calculated {
+						panic!(
+							"Not correct values in CrcMismatch {:?} {:?}",
+							stated, calculated
+						)
+					} else {
+						// pass
+					}
+				},
+				other => panic!("Not CrcMismatch {:?}", other),
+			}
 		}
 
 		#[test]
