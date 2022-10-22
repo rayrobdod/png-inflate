@@ -22,13 +22,13 @@ pub fn read(file: &mut dyn Read) -> Result<Vec<Chunk>, ReadError> {
 
 				loop {
 					match Chunk::read(file) {
-						Result::Ok(Some(x)) => {
+						ChunkReadResult::Ok(x) => {
 							retval.push(x);
 						},
-						Result::Ok(None) => {
+						ChunkReadResult::Eof => {
 							break Ok(retval);
 						},
-						Result::Err(x) => {
+						ChunkReadResult::Err(x) => {
 							break Err(ReadError::from(x));
 						},
 					}
@@ -57,24 +57,24 @@ pub struct Chunk {
 
 impl Chunk {
 	/// Reads a PNG chunk from a data stream
-	fn read(file: &mut dyn Read) -> Result<Option<Chunk>, ChunkReadError> {
+	fn read(file: &mut dyn Read) -> ChunkReadResult {
 		let mut size: [u8; 4] = [0, 0, 0, 0];
 		let (size_head, size_tail) = size.split_at_mut(1);
 		if let Err(e) = file.read_exact(size_head) {
 			if e.kind() == ErrorKind::UnexpectedEof {
-				return Ok(None);
+				return ChunkReadResult::Eof;
 			} else {
-				return Err(ChunkReadError::Io(e));
+				return ChunkReadResult::Err(ChunkReadError::Io(e));
 			}
 		}
 		if let Err(e) = file.read_exact(size_tail) {
-			return Err(ChunkReadError::Io(e));
+			return ChunkReadResult::Err(ChunkReadError::Io(e));
 		}
 		let size = u32::from_be_bytes(size);
 
 		let mut typ: [u8; 4] = [0, 0, 0, 0];
 		if let Err(e) = file.read_exact(&mut typ) {
-			return Err(ChunkReadError::Io(e));
+			return ChunkReadResult::Err(ChunkReadError::Io(e));
 		}
 		let typ = typ;
 
@@ -82,30 +82,30 @@ impl Chunk {
 			.iter()
 			.all(|c| (0x41 <= *c && *c <= 0x5A) || (0x61 <= *c && *c <= 0x7A))
 		{
-			return Err(ChunkReadError::InvalidTyp(typ));
+			return ChunkReadResult::Err(ChunkReadError::InvalidTyp(typ));
 		}
 
 		let mut data: Vec<u8> = vec![0; u32_to_usize(size)];
 		if let Err(e) = file.read_exact(&mut data) {
-			return Err(ChunkReadError::Io(e));
+			return ChunkReadResult::Err(ChunkReadError::Io(e));
 		}
 		let data = data;
 
 		let mut stated_crc: [u8; 4] = [0; 4];
 		if let Err(e) = file.read_exact(&mut stated_crc) {
-			return Err(ChunkReadError::Io(e));
+			return ChunkReadResult::Err(ChunkReadError::Io(e));
 		}
 		let stated_crc = u32::from_be_bytes(stated_crc);
 		let calcuated_crc = calculate_crc(typ.iter().chain(data.iter()));
 
 		if stated_crc != calcuated_crc {
-			return Err(ChunkReadError::CrcMismatch {
+			return ChunkReadResult::Err(ChunkReadError::CrcMismatch {
 				stated: stated_crc,
 				calculated: calcuated_crc,
 			});
 		}
 
-		Ok(Some(Chunk { typ, data }))
+		ChunkReadResult::Ok(Chunk { typ, data })
 	}
 
 	/// Writes a PNG chunk to a data stream
@@ -173,7 +173,7 @@ impl From<ChunkReadError> for ReadError {
 
 /// Represents an error that can occur when decoding a PNG Chunk
 #[derive(Debug)]
-pub enum ChunkReadError {
+enum ChunkReadError {
 	/** An IO error */
 	Io(::std::io::Error),
 	/** The chunk's typ is invalid (a byte was outside the range `A-Za-z`) */
@@ -192,6 +192,41 @@ impl ::std::fmt::Display for ChunkReadError {
 				"CRC mismatch: file {:x}; calculated {:x}",
 				stated, calculated
 			),
+		}
+	}
+}
+
+/// The possible results of Chunk.read
+#[derive(Debug)]
+enum ChunkReadResult {
+	/** The stream has reached the End of File at the chunk boundary; there are no more chunks */
+	Eof,
+	/** The chunk that has been successfully read */
+	Ok(Chunk),
+	/** An error occurred while reading the chunk */
+	Err(ChunkReadError),
+}
+
+impl ChunkReadResult {
+	#[cfg(test)]
+	fn unwrap(self) -> Chunk {
+		match self {
+			ChunkReadResult::Ok(x) => x,
+			ChunkReadResult::Eof => {
+				panic!("Tried to unwrap a ChunkReadResult::Eof");
+			},
+			ChunkReadResult::Err(x) => {
+				panic!("Tried to unwrap a ChunkReadResult::Err({:?})", x);
+			},
+		}
+	}
+
+	#[cfg(test)]
+	fn is_eof(&self) -> bool {
+		match self {
+			ChunkReadResult::Ok(_) => false,
+			ChunkReadResult::Eof => true,
+			ChunkReadResult::Err(_) => false,
 		}
 	}
 }
@@ -261,10 +296,11 @@ mod tests {
 	mod chunk_read {
 		use super::super::Chunk;
 		use super::super::ChunkReadError;
+		use super::super::ChunkReadResult;
 		use std::io::ErrorKind;
 
-		fn assert_is_err_eof(e: Result<Option<Chunk>, ChunkReadError>) {
-			if let Err(e) = e {
+		fn assert_is_err_eof(e: ChunkReadResult) {
+			if let ChunkReadResult::Err(e) = e {
 				if let ChunkReadError::Io(e) = e {
 					if e.kind() == ErrorKind::UnexpectedEof {
 						// success
@@ -282,7 +318,7 @@ mod tests {
 		#[test]
 		fn exact_size() {
 			#[rustfmt::skip]
-			let exp = Some(Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]});
+			let exp = Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]};
 			#[rustfmt::skip]
 			let mut dut:&[u8] = &[0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B];
 			let res = Chunk::read(&mut dut).unwrap();
@@ -293,7 +329,7 @@ mod tests {
 		#[test]
 		fn reads_only_the_amount_needed() {
 			#[rustfmt::skip]
-			let exp = Some(Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]});
+			let exp = Chunk{typ:*b"ABCD", data:vec![61, 62, 63, 64]};
 			let mut dut: &[u8] = &[
 				0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 0x75, 0x88, 0x7C, 0x4B, 11, 22,
 				33, 44, 55,
@@ -309,7 +345,7 @@ mod tests {
 				0, 0, 0, 4, 0x41, 0x42, 0x43, 0x44, 61, 62, 63, 64, 1, 2, 3, 4,
 			];
 			match Chunk::read(&mut dut) {
-				Err(ChunkReadError::CrcMismatch { stated, calculated }) => {
+				ChunkReadResult::Err(ChunkReadError::CrcMismatch { stated, calculated }) => {
 					if 0x01020304 != stated || 0x75887C4B != calculated {
 						panic!(
 							"Not correct values in CrcMismatch {:?} {:?}",
@@ -355,10 +391,9 @@ mod tests {
 
 		#[test]
 		fn reports_valid_eof() {
-			let exp = None;
 			let mut dut: &[u8] = &[];
-			let res = Chunk::read(&mut dut).unwrap();
-			assert!(exp == res);
+			let res = Chunk::read(&mut dut);
+			assert!(res.is_eof(), "Expected Eof; Was {:?}", res);
 			assert!(dut.is_empty());
 		}
 	}
