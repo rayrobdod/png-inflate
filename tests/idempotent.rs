@@ -46,6 +46,10 @@ fn test_one(infile: &Path, extra_args: &[&str]) {
 	assert_eq!(res1, res2);
 }
 
-for_each_valid_file!(test_one, &[]);
-for_each_otherinvalid_file!(test_one, &[]);
-for_each_unsafecopy_file!(test_one, &["--copy-unsafe"]);
+mod noargs {
+	for_each_valid_file!(super::test_one, &[]);
+	for_each_otherinvalid_file!(super::test_one, &[]);
+}
+mod copy_unsafe {
+	for_each_unsafecopy_file!(super::test_one, &["--copy-unsafe"]);
+}

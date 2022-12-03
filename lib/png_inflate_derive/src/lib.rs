@@ -63,7 +63,7 @@ fn macro_template(name: &str, cases: &[PathBuf]) -> TokenStream {
 		TokenTree::Group(Group::new(
 			Delimiter::Brace,
 			tokens![
-				"($body:ident, $( $args:expr ),* ) =>"
+				"($body:path, $( $args:expr ),* ) =>"
 					.parse::<TokenStream>()
 					.unwrap(),
 				TokenTree::Group(Group::new(

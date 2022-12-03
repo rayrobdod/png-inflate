@@ -70,5 +70,9 @@ fn test_one(infile: &Path, extra_args: &[&str]) {
 	::std::fs::remove_file(&clean_sng).expect("could not delete temporary files");
 }
 
-for_each_valid_file!(test_one, &[]);
-for_each_unsafecopy_file!(test_one, &["--copy-unsafe"]);
+mod noargs {
+	for_each_valid_file!(super::test_one, &[]);
+}
+mod copy_unsafe {
+	for_each_unsafecopy_file!(super::test_one, &["--copy-unsafe"]);
+}
