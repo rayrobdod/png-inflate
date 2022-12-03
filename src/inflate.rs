@@ -17,7 +17,7 @@ fn main() {
 	let args = ::std::env::args().fold(Args::default(), |fold, item| fold.push(&item));
 
 	if args.help {
-		Args::print_usage(&args.program_name.unwrap_or_else(|| "".to_string()));
+		Args::print_usage(&args.program_name.unwrap_or_default());
 		::std::process::exit(0);
 	}
 
@@ -287,11 +287,11 @@ impl Args {
 			}
 		} else {
 			// then the argument is a positional argument
-			if self.program_name == Option::None {
+			if self.program_name.is_none() {
 				self.program_name = Option::Some(arg.to_string());
-			} else if self.input_file == Option::None {
+			} else if self.input_file.is_none() {
 				self.input_file = Option::Some(arg.to_string());
-			} else if self.output_file == Option::None {
+			} else if self.output_file.is_none() {
 				self.output_file = Option::Some(arg.to_string());
 			} else {
 				panic!("Too many positional arguments");

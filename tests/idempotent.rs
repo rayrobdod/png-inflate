@@ -18,7 +18,7 @@ fn test_one(infile: &Path, extra_args: &[&str]) {
 	let out2file = NamedTempFile::new().expect("").into_temp_path();
 
 	let output1 = Command::new(PROGRAM_EXE)
-		.arg(&infile)
+		.arg(infile)
 		.arg(&out1file)
 		.args(extra_args)
 		.output()

@@ -24,7 +24,7 @@ fn test_one(infile: &Path, extra_args: &[&str]) {
 	let clean_png = clean.with_extension("png");
 	let clean_sng = clean.with_extension("sng");
 
-	::std::fs::copy(&infile, &orig_png).expect("Could not copy input to temp file");
+	::std::fs::copy(infile, &orig_png).expect("Could not copy input to temp file");
 
 	let output_sng_orig = Command::new(SNG_EXE)
 		.arg(&orig_png)

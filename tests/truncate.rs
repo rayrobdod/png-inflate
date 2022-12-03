@@ -28,7 +28,7 @@ fn test_one(infile: &Path, extra_args: &[&str]) {
 	let outfile = outfile.into_temp_path();
 
 	let output = Command::new(PROGRAM_EXE)
-		.arg(&infile)
+		.arg(infile)
 		.arg(&outfile)
 		.args(extra_args)
 		.output()
