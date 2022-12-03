@@ -38,9 +38,10 @@ fn test_one(infile: &Path, extra_args: &[&str]) {
 mod noargs {
 	for_each_badmagic_file!(super::test_one, &[]);
 	for_each_badchecksum_file!(super::test_one, &[]);
+	for_each_unsafecopy_file!(super::test_one, &[]);
 
 	// acTL, fcTL and fdAT are private and not safe-to-copy, and so should be
 	// rejected without an argument explicitly allowing it, either `--copy-unsafe`
 	// or a future `--apng` argument
-	for_each_unsafecopy_file!(super::test_one, &[]);
+	for_each_apng_file!(super::test_one, &[]);
 }

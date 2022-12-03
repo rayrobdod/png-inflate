@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+* add --apng argument.
+  When enabled, apng chunks are treated as known chunks, and fdAT chunk data is inflated.
 
 ## [v2021.6.12] 2021-06-12
 * No longer truncate files after the first IEND chunk.
