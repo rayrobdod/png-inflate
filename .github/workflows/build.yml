@@ -48,14 +48,18 @@ jobs:
          & C:\tools\cygwin\cygwinsetup.exe --no-admin -q -P sng
      - name: Run tests
        run: cargo test --verbose ${{matrix.mode_flag}}
-  check_fmt:
+  check_format:
     runs-on: ubuntu-latest
     steps:
      - uses: actions/checkout@v3
-     - name: cargo fmt
-       run: cargo fmt --all -- --check
-     - name: Check Sorted
-       run: 'sort --check -- rustfmt.toml'
+     - name: Set filters
+       run: |
+         git config filter.rustfmt.clean rustfmt
+         git config filter.sort.clean 'LC_ALL=C sort'
+     - name: Apply the filters
+       run: 'git add --renormalize .'
+     - name: Check that the filters dont change the files
+       run: 'git diff --exit-code HEAD'
   clippy_lint:
     runs-on: ubuntu-latest
     env:

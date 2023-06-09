@@ -1,10 +1,9 @@
 *.md	text	diff=markdown
 *.png	binary	diff=png	-filter
-*.ps1	text	diff=powershell
 *.rs	text	diff=rust	filter=rustfmt
 *.toml	text	diff=toml
 *.yml	text	diff=yaml
 /.gitattributes	filter=sort
 /Cargo.lock	binary
+/rustfmt.toml   filter=sort
 /tests/PngSuite/*	binary
-rustfmt.toml   filter=sort
