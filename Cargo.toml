@@ -20,7 +20,7 @@ name = "png_inflate"
 path = "src/inflate.rs"
 
 [dependencies]
-atomicwrites = "0.3.*"
+atomicwrites = "0.4.*"
 
 [dev-dependencies]
 tempfile = "3.*"
