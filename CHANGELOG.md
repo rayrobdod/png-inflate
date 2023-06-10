@@ -1,6 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [v2023.6.10] 2023-06-10
+Refactors, process improvements, dependency updating
+
+No specific bug fixes or new features
 
 ## [v2021.6.12] 2021-06-12
 * No longer truncate files after the first IEND chunk.
