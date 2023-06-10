@@ -1,5 +1,7 @@
 # Changelog
 
+## [Unreleased]
+
 ## [v2023.6.10] 2023-06-10
 Refactors, process improvements, dependency updating
 

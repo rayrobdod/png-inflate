@@ -107,7 +107,7 @@ checksum = "ef53942eb7bf7ff43a617b3e2c1c4a5ecf5944a7c1bc12d7ee39bbb15e5c1519"
 
 [[package]]
 name = "png_inflate"
-version = "2023.6.10"
+version = "0.0.0-SNAPSHOT"
 dependencies = [
  "atomicwrites",
  "png_inflate_derive",
