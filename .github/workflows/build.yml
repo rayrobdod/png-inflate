@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
     name:  ${{ matrix.os }}-${{ matrix.mode }}
     steps:
-     - uses: actions/checkout@v3
+     - uses: actions/checkout@v4
      - name: Cache cargo registry
        uses: actions/cache@v3
        with:
@@ -32,7 +32,7 @@ jobs:
            cargo-${{ matrix.os }}-
      - name: Build
        run: cargo build --verbose ${{ matrix.mode_flag }}
-     - uses: actions/upload-artifact@master
+     - uses: actions/upload-artifact@v4
        with:
          name: png_inflate-${{ matrix.os }}-${{ matrix.mode }}${{ matrix.exe_suffix }}
          path: target/${{ matrix.mode }}/png_inflate${{ matrix.exe_suffix }}
@@ -51,7 +51,7 @@ jobs:
   check_format:
     runs-on: ubuntu-latest
     steps:
-     - uses: actions/checkout@v3
+     - uses: actions/checkout@v4
      - name: Set filters
        run: |
          git config filter.rustfmt.clean rustfmt
@@ -65,7 +65,7 @@ jobs:
     env:
       SNG: 'arbitrary value'
     steps:
-     - uses: actions/checkout@v3
+     - uses: actions/checkout@v4
      - name: Cache cargo registry
        uses: actions/cache@v3
        with:
