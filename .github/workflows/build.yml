@@ -75,3 +75,25 @@ jobs:
            cargo-ubuntu-
      - name: cargo clippy
        run: cargo clippy --all-targets --all-features -- -D warnings
+  check_licenses:
+    runs-on: ubuntu-latest
+    steps:
+     - uses: actions/checkout@v4
+     - name: Cache cargo registry
+       uses: actions/cache@v4
+       with:
+         path: |
+           ~/.cargo/registry/
+           ~/.cargo/bin/cargo-license
+           ~/.cargo/.crates.toml
+           ~/.cargo/.crates2.json
+         key: cargo-license-${{ hashFiles('**/Cargo.lock') }}
+         restore-keys: |
+           cargo-license-
+           cargo-ubuntu-
+     - name: Install cargo-license
+       run: 'cargo install cargo-license'
+     - name: Check licenses
+       run: >
+         cargo license --tsv |
+         awk -f .github/license-acceptable.awk

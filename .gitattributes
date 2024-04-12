@@ -1,3 +1,4 @@
+*.awk	text	diff=awk
 *.md	text	diff=markdown
 *.png	binary	diff=png	-filter
 *.rs	text	diff=rust	filter=rustfmt

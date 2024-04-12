@@ -33,6 +33,7 @@ install:
     ./rustup.sh -y --default-toolchain $CHANNEL --default-host $TARGET
     source $HOME/.cargo/env
 - ps: '& cargo -V'
+- ps: '& cargo install -q cargo-license'
 
 build_script:
 - cmd: 'cargo build %MODE%'
@@ -46,6 +47,8 @@ test_script:
 - sh: 'cargo test $MODE'
 
 - ps: 'cargo fmt --all -- --check'
+
+- ps: 'cargo license --tsv | awk -f .github/license-acceptable.awk'
 
 - ps: './target/release/png_inflate --version'
 artifacts:
