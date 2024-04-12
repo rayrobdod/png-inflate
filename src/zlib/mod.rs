@@ -71,8 +71,10 @@ impl Header {
 				_ => panic!(""),
 			};
 
-			if method != u4::_8 || dict {
-				Err(InflateError::UnsupportedHeader)
+			if method != u4::_8 {
+				Err(InflateError::UnknownCompressionMethod(method))
+			} else if dict {
+				Err(InflateError::HasPresetDictionary)
 			} else {
 				Ok(Header::new(info, level))
 			}
@@ -96,8 +98,9 @@ impl Header {
 pub enum InflateError {
 	UnexpectedEof,
 	ChecksumMismatchHeader,
-	UnsupportedHeader,
-	ChecksumMismatch,
+	UnknownCompressionMethod(u4),
+	ChecksumMismatch { given: u32, calculated: u32 },
+	HasPresetDictionary,
 
 	DeflateNonCompressedLengthInvalid,
 	DeflateInvalidBtype,
@@ -139,8 +142,10 @@ pub fn inflate(r: &[u8]) -> Result<Vec<u8>, InflateError> {
 	let calculated_chksum = adler32(&result);
 
 	if given_chksum != calculated_chksum {
-		eprintln!("{:x} {:x}", given_chksum, calculated_chksum);
-		Err(InflateError::ChecksumMismatch)
+		Err(InflateError::ChecksumMismatch {
+			given: given_chksum,
+			calculated: calculated_chksum,
+		})
 	} else {
 		Ok(result)
 	}
@@ -227,14 +232,15 @@ mod tests {
 		}
 		#[test]
 		fn has_dict_fails() {
-			let exp: Result<Header, InflateError> = Err(InflateError::UnsupportedHeader);
+			let exp: Result<Header, InflateError> = Err(InflateError::HasPresetDictionary);
 			let dut: u16 = 0x68A0;
 			let res = Header::read(dut);
 			assert!(exp == res, "{:?} != {:?}", exp, res);
 		}
 		#[test]
 		fn method_not_deflate_fails() {
-			let exp: Result<Header, InflateError> = Err(InflateError::UnsupportedHeader);
+			let exp: Result<Header, InflateError> =
+				Err(InflateError::UnknownCompressionMethod(u4::_5));
 			let dut: u16 = 0x6599;
 			let res = Header::read(dut);
 			assert!(exp == res, "{:?} != {:?}", exp, res);

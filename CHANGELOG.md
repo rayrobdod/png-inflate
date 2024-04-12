@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+* Adjusted some error messages to be slightly more informative
+  and print in natural-language instead of the programatic debug print style
 
 ## [v2023.6.10] 2023-06-10
 Refactors, process improvements, dependency updating

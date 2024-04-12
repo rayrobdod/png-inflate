@@ -57,7 +57,7 @@ fn main() {
 					}
 				},
 				Result::Err(x) => {
-					eprintln!("Could not transform: {:?}", x);
+					eprintln!("Could not transform: {}", x);
 					::std::process::exit(1);
 				},
 			}
@@ -79,6 +79,43 @@ enum Error {
 impl From<zlib::InflateError> for Error {
 	fn from(src: zlib::InflateError) -> Error {
 		Error::Zlib(src)
+	}
+}
+
+impl ::std::fmt::Display for Error {
+	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+		match self {
+			Error::Zlib(zlib::InflateError::UnexpectedEof) => {
+				write!(f, "Unexpected End of File")
+			},
+			Error::CannotCopySafely => {
+				write!(f, "Found non-safe-to-copy chunk")
+			},
+			Error::UnsupportedCompressionMethod => {
+				write!(f, "Unsupported PNG Compression Method")
+			},
+			Error::Zlib(zlib::InflateError::ChecksumMismatchHeader) => {
+				write!(f, "ZLib Header Checksum Mismatch")
+			},
+			Error::Zlib(zlib::InflateError::UnknownCompressionMethod(method)) => {
+				write!(f, "Unsupported Zlib Compression Method: {method:X}")
+			},
+			Error::Zlib(zlib::InflateError::ChecksumMismatch { given, calculated }) => {
+				write!(
+					f,
+					"ZLib Checksum Mismatch: given `{given:x}`, calculated `{calculated:x}`"
+				)
+			},
+			Error::Zlib(zlib::InflateError::HasPresetDictionary) => {
+				write!(f, "ZLib Segment has preset dictionary")
+			},
+			Error::Zlib(zlib::InflateError::DeflateNonCompressedLengthInvalid) => {
+				write!(f, "Malformed deflate block: LEN and NLEN mismatch")
+			},
+			Error::Zlib(zlib::InflateError::DeflateInvalidBtype) => {
+				write!(f, "Malformed deflate block: invalid BTYPE")
+			},
+		}
 	}
 }
 
