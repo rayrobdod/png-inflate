@@ -186,7 +186,15 @@ impl ::std::fmt::Display for ChunkReadError {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
 		match self {
 			ChunkReadError::Io(x) => write!(f, "{}", x),
-			ChunkReadError::InvalidTyp(x) => write!(f, "Illegal chunk type: {:?}", x),
+			ChunkReadError::InvalidTyp(typ) => {
+				let bytes = typ;
+				let chars: String = typ
+					.iter()
+					.map(|x| char::from(*x))
+					.map(|x| if x.is_ascii_graphic() { x } else { '.' })
+					.collect();
+				write!(f, "Illegal chunk type: {:?} | {:?}", bytes, chars)
+			},
 			ChunkReadError::CrcMismatch { stated, calculated } => write!(
 				f,
 				"CRC mismatch: file {:x}; calculated {:x}",

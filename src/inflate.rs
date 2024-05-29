@@ -71,7 +71,7 @@ fn main() {
 
 #[derive(Debug)]
 enum Error {
-	CannotCopySafely,
+	CannotCopySafely([u8; 4]),
 	UnsupportedCompressionMethod,
 	Zlib(zlib::InflateError),
 }
@@ -88,8 +88,14 @@ impl ::std::fmt::Display for Error {
 			Error::Zlib(zlib::InflateError::UnexpectedEof) => {
 				write!(f, "Unexpected End of File")
 			},
-			Error::CannotCopySafely => {
-				write!(f, "Found non-safe-to-copy chunk")
+			Error::CannotCopySafely(typ) => {
+				// if `typ` were non-alpha, the typ would have triggered ChunkReadError::InvalidTyp
+				// and not have gotten this far
+				let chars: String = typ
+					.iter()
+					.map(|x| char::from(*x))
+					.collect();
+				write!(f, "Found non-safe-to-copy chunk {}", chars)
 			},
 			Error::UnsupportedCompressionMethod => {
 				write!(f, "Unsupported PNG Compression Method")
@@ -216,7 +222,7 @@ fn deflate_chunks(indata: png::Chunk, ignore_unsafe_to_copy: bool) -> Result<png
 			if ignore_unsafe_to_copy || indata.safe_to_copy() {
 				Ok(indata)
 			} else {
-				Err(Error::CannotCopySafely)
+				Err(Error::CannotCopySafely(indata.typ))
 			}
 		},
 	}
