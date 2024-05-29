@@ -3,6 +3,9 @@
 ## [Unreleased]
 * Adjusted some error messages to be slightly more informative
   and print in natural-language instead of the programatic debug print style
+* Include filenames in error messages
+* Implement option `--assume-filename` to print a filename instead of `stdin`
+  in error messages when input is stdin.
 
 ## [v2023.6.10] 2023-06-10
 Refactors, process improvements, dependency updating

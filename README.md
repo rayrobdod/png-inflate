@@ -30,14 +30,14 @@ using `git config -l | grep filter`)
 To install globally
 
 ```bash
-git config --global --replace-all filter.png_inflate.clean /opt/png_inflate
+git config --global --replace-all filter.png_inflate.clean "/opt/png_inflate --assume-filename %f"
 echo "*.png filter=png_inflate" >>${XDG_CONFIG_HOME-${HOME}/.config}/git/attributes
 ```
 
 To install for a single repository
 
 ```bash
-git config --local --replace-all filter.png_inflate.clean /opt/png_inflate
+git config --local --replace-all filter.png_inflate.clean "/opt/png_inflate --assume-filename %f"
 echo "*.png filter=png_inflate" >>.git/info/attributes
 ```
 

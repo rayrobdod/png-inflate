@@ -28,12 +28,17 @@ fn main() {
 	}
 
 	let input = {
-		let mut infile = FileOrStdin::from(args.input_file);
+		let mut infile = FileOrStdin::from(&args.input_file);
 		png::read(&mut infile)
 	};
 
-	let mut outfile = FileOrStdout::from(args.output_file);
+	let mut outfile = FileOrStdout::from(&args.output_file);
 	let ignore_unsafe_to_copy = args.ignore_unsafe_to_copy;
+	let reported_infilename = args
+		.input_file
+		.or(args.assume_filename)
+		.unwrap_or("stdin".to_string());
+	let reported_outfilename = args.output_file.unwrap_or("stdout".to_string());
 
 	match input {
 		Result::Ok(indata) => {
@@ -51,19 +56,19 @@ fn main() {
 							// Ok
 						},
 						Result::Err(x) => {
-							eprintln!("Could not write: {}", x);
+							eprintln!("Could not write: {}: {}", reported_outfilename, x);
 							::std::process::exit(1);
 						},
 					}
 				},
 				Result::Err(x) => {
-					eprintln!("Could not transform: {}", x);
+					eprintln!("Could not transform: {}: {}", reported_infilename, x);
 					::std::process::exit(1);
 				},
 			}
 		},
 		Result::Err(x) => {
-			eprintln!("Could not read: {}", x);
+			eprintln!("Could not read: {}: {}", reported_infilename, x);
 			::std::process::exit(1);
 		},
 	}
@@ -91,10 +96,7 @@ impl ::std::fmt::Display for Error {
 			Error::CannotCopySafely(typ) => {
 				// if `typ` were non-alpha, the typ would have triggered ChunkReadError::InvalidTyp
 				// and not have gotten this far
-				let chars: String = typ
-					.iter()
-					.map(|x| char::from(*x))
-					.collect();
+				let chars: String = typ.iter().map(|x| char::from(*x)).collect();
 				write!(f, "Found non-safe-to-copy chunk {}", chars)
 			},
 			Error::UnsupportedCompressionMethod => {
@@ -278,14 +280,23 @@ impl<I: Sized + Iterator<Item = png::Chunk>> IteratorExt for I {
 	}
 }
 
+#[derive(Debug, Default, PartialEq)]
+enum ArgsState {
+	#[default]
+	Open,
+	ForcePositional,
+	AssumeFilename,
+}
+
 /// A representation of the program arguments
 #[derive(Debug, Default)]
 struct Args {
-	force_positional: bool,
+	state: ArgsState,
 
 	help: bool,
 	version: bool,
 	ignore_unsafe_to_copy: bool,
+	assume_filename: Option<String>,
 
 	program_name: Option<String>,
 	input_file: Option<String>,
@@ -305,9 +316,10 @@ impl Args {
 		println!();
 		println!("{}", PROGRAM_DESCRIPTION);
 		println!();
-		println!("  {:3} {:20} {}", "", "--copy-unsafe", "continue even upon encounter of unknown not-safe-to-copy chunks");
-		println!("  {:3} {:20} {}", "-?,", "--help", "display this help message");
-		println!("  {:3} {:20} {}", "", "--version", "display program version");
+		println!("  {:3} {:30} {}", "", "--assume-filename filename", "When reading from stdin, use this filename in error reporting");
+		println!("  {:3} {:30} {}", "", "--copy-unsafe", "continue even upon encounter of unknown not-safe-to-copy chunks");
+		println!("  {:3} {:30} {}", "-?,", "--help", "display this help message");
+		println!("  {:3} {:30} {}", "", "--version", "display program version");
 	}
 
 	/// Decode arg, add the result to self, then return self.
@@ -315,10 +327,18 @@ impl Args {
 	fn push(mut self, arg: String) -> Args {
 		#[allow(clippy::iter_nth_zero)]
 		let arg_zeroth_char = arg.chars().nth(0).unwrap_or('\0');
-		if !self.force_positional && arg_zeroth_char == '-' {
+		if self.state == ArgsState::AssumeFilename {
+			if self.assume_filename.is_some() {
+				panic!("--assume-filename provided multiple times");
+			}
+			self.assume_filename = Option::Some(arg);
+			self.state = ArgsState::Open;
+		} else if self.state != ArgsState::ForcePositional && arg_zeroth_char == '-' {
 			// then the argument is a named argument
 			if arg == "--" {
-				self.force_positional = true;
+				self.state = ArgsState::ForcePositional;
+			} else if arg == "--assume-filename" || arg == "/assume-filename" {
+				self.state = ArgsState::AssumeFilename;
 			} else if arg == "--copy-unsafe" || arg == "/copy-unsafe" {
 				self.ignore_unsafe_to_copy = true;
 			} else if arg == "-?" || arg == "--help" || arg == "/?" || arg == "/help" {

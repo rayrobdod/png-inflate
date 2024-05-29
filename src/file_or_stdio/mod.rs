@@ -10,8 +10,8 @@ pub enum FileOrStdin {
 	Stdin(::std::io::Stdin),
 }
 
-impl From<Option<String>> for FileOrStdin {
-	fn from(src: Option<String>) -> FileOrStdin {
+impl From<&Option<String>> for FileOrStdin {
+	fn from(src: &Option<String>) -> FileOrStdin {
 		match src {
 			None => FileOrStdin::Stdin(::std::io::stdin()),
 			Some(s) => FileOrStdin::File(
@@ -38,8 +38,8 @@ pub enum FileOrStdout {
 	Stdout(::std::io::Stdout),
 }
 
-impl From<Option<String>> for FileOrStdout {
-	fn from(src: Option<String>) -> FileOrStdout {
+impl From<&Option<String>> for FileOrStdout {
+	fn from(src: &Option<String>) -> FileOrStdout {
 		match src {
 			None => FileOrStdout::Stdout(::std::io::stdout()),
 			Some(s) => FileOrStdout::File(atomicwrites::AtomicFile::new(
