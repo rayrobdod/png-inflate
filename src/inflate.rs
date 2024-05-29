@@ -14,7 +14,7 @@ const PROGRAM_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
 const PROGRAM_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
 fn main() {
-	let args = ::std::env::args().fold(Args::default(), |fold, item| fold.push(&item));
+	let args = ::std::env::args().fold(Args::default(), |fold, item| fold.push(item));
 
 	if args.help {
 		Args::print_usage(&args.program_name.unwrap_or_default());
@@ -306,7 +306,7 @@ impl Args {
 
 	/// Decode arg, add the result to self, then return self.
 	/// Intended as the lambda in a Iter::fold invocation.
-	fn push(mut self, arg: &str) -> Args {
+	fn push(mut self, arg: String) -> Args {
 		#[allow(clippy::iter_nth_zero)]
 		let arg_zeroth_char = arg.chars().nth(0).unwrap_or('\0');
 		if !self.force_positional && arg_zeroth_char == '-' {
@@ -325,11 +325,11 @@ impl Args {
 		} else {
 			// then the argument is a positional argument
 			if self.program_name.is_none() {
-				self.program_name = Option::Some(arg.to_string());
+				self.program_name = Option::Some(arg);
 			} else if self.input_file.is_none() {
-				self.input_file = Option::Some(arg.to_string());
+				self.input_file = Option::Some(arg);
 			} else if self.output_file.is_none() {
-				self.output_file = Option::Some(arg.to_string());
+				self.output_file = Option::Some(arg);
 			} else {
 				panic!("Too many positional arguments");
 			}
