@@ -88,6 +88,7 @@ pub fn generate_for_each_files(_input: TokenStream) -> TokenStream {
 	let pngsuite_dir = tests_dir.join("PngSuite");
 
 	let mut cases_valid: Vec<PathBuf> = Vec::new();
+	let mut cases_apng: Vec<PathBuf> = Vec::new();
 	let mut cases_badmagic: Vec<PathBuf> = Vec::new();
 	let mut cases_badchecksum: Vec<PathBuf> = Vec::new();
 	let mut cases_otherinvalid: Vec<PathBuf> = Vec::new(); // cases that are invalid, but not in a way that png_inflate cares about
@@ -119,12 +120,13 @@ pub fn generate_for_each_files(_input: TokenStream) -> TokenStream {
 		panic!("Could not read pngsuite directory");
 	}
 
-	cases_unsafecopy.push(tests_dir.join("apng_twoframe.png"));
+	cases_apng.push(tests_dir.join("apng_twoframe.png"));
 	cases_valid.push(tests_dir.join("with_custom_safe_to_copy_chunk.png"));
 	cases_unsafecopy.push(tests_dir.join("with_custom_unsafe_to_copy_chunk.png"));
 
 	tokens![
 		macro_template("for_each_valid_file", &cases_valid),
+		macro_template("for_each_apng_file", &cases_apng),
 		macro_template("for_each_badmagic_file", &cases_badmagic),
 		macro_template("for_each_badchecksum_file", &cases_badchecksum),
 		macro_template("for_each_otherinvalid_file", &cases_otherinvalid),

@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+* add --apng argument.
+  When enabled, apng chunks are treated as known chunks, and fdAT chunk data is inflated.
 * Adjusted some error messages to be slightly more informative
   and print in natural-language instead of the programatic debug print style
 * Include filenames in error messages

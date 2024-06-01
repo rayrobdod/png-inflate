@@ -24,4 +24,5 @@ atomicwrites = "0.4.*"
 
 [dev-dependencies]
 tempfile = "3.*"
+png = "0.17.*"
 png_inflate_derive = {path = "lib/png_inflate_derive"}

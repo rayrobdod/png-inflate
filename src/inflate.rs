@@ -34,6 +34,7 @@ fn main() {
 
 	let mut outfile = FileOrStdout::from(&args.output_file);
 	let ignore_unsafe_to_copy = args.ignore_unsafe_to_copy;
+	let process_apng = args.process_apng;
 	let reported_infilename = args
 		.input_file
 		.or(args.assume_filename)
@@ -46,7 +47,7 @@ fn main() {
 				.iter()
 				.cloned()
 				.concat_idats()
-				.map(|x| deflate_chunks(x, ignore_unsafe_to_copy))
+				.map(|x| deflate_chunks(x, ignore_unsafe_to_copy, process_apng))
 				.collect();
 
 			match outdata {
@@ -127,7 +128,11 @@ impl ::std::fmt::Display for Error {
 	}
 }
 
-fn deflate_chunks(indata: png::Chunk, ignore_unsafe_to_copy: bool) -> Result<png::Chunk, Error> {
+fn deflate_chunks(
+	indata: png::Chunk,
+	ignore_unsafe_to_copy: bool,
+	process_apng: bool,
+) -> Result<png::Chunk, Error> {
 	match indata.typ.as_ref() {
 		// Not compressed, but contains data that can be validated
 		b"IHDR" => {
@@ -219,6 +224,36 @@ fn deflate_chunks(indata: png::Chunk, ignore_unsafe_to_copy: bool) -> Result<png
 		b"sCAL" | b"gIFg" | b"gIFx" | b"gIFt" | b"eXIf" => {
 			Ok(indata)
 		},
+		// (apng) Contain no compression, and are not affected by compression details of other chunks
+		b"acTL" | b"fcTL" => {
+			if ignore_unsafe_to_copy || process_apng {
+				Ok(indata)
+			} else {
+				Err(Error::CannotCopySafely(indata.typ))
+			}
+		},
+		// (apng) Contains a u32 followed by compressed data
+		b"fdAT" => {
+			if process_apng {
+				let mut iter = indata.data.iter().cloned();
+				let sequence_number: Vec<u8> = iter.by_ref().take(4).collect();
+				let value: Vec<u8> = iter.collect();
+				let value = zlib::deflate_immediate(&zlib::inflate(&value)?);
+				let newdata = sequence_number
+					.iter()
+					.chain(value.iter())
+					.cloned()
+					.collect();
+				Ok(png::Chunk {
+					typ: indata.typ,
+					data: newdata,
+				})
+			} else if ignore_unsafe_to_copy {
+				Ok(indata)
+			} else {
+				Err(Error::CannotCopySafely(indata.typ))
+			}
+		},
 		// unknown chunks
 		_ => {
 			if ignore_unsafe_to_copy || indata.safe_to_copy() {
@@ -295,6 +330,7 @@ struct Args {
 
 	help: bool,
 	version: bool,
+	process_apng: bool,
 	ignore_unsafe_to_copy: bool,
 	assume_filename: Option<String>,
 
@@ -316,8 +352,9 @@ impl Args {
 		println!();
 		println!("{}", PROGRAM_DESCRIPTION);
 		println!();
+		println!("  {:3} {:30} {}", "", "--apng", "process apng chunks");
 		println!("  {:3} {:30} {}", "", "--assume-filename filename", "When reading from stdin, use this filename in error reporting");
-		println!("  {:3} {:30} {}", "", "--copy-unsafe", "continue even upon encounter of unknown not-safe-to-copy chunks");
+		println!("  {:3} {:30} {}", "", "--copy-unsafe", "pass though unknown not-safe-to-copy chunks");
 		println!("  {:3} {:30} {}", "-?,", "--help", "display this help message");
 		println!("  {:3} {:30} {}", "", "--version", "display program version");
 	}
@@ -337,6 +374,8 @@ impl Args {
 			// then the argument is a named argument
 			if arg == "--" {
 				self.state = ArgsState::ForcePositional;
+			} else if arg == "--apng" || arg == "/apng" {
+				self.process_apng = true;
 			} else if arg == "--assume-filename" || arg == "/assume-filename" {
 				self.state = ArgsState::AssumeFilename;
 			} else if arg == "--copy-unsafe" || arg == "/copy-unsafe" {

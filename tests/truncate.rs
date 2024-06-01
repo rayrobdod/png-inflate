@@ -53,3 +53,7 @@ mod noargs {
 mod copy_unsafe {
 	for_each_unsafecopy_file!(super::test_one, &["--copy-unsafe"]);
 }
+mod apng {
+	for_each_valid_file!(super::test_one, &["--apng"]);
+	for_each_apng_file!(super::test_one, &["--apng"]);
+}
