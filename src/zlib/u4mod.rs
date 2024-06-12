@@ -114,7 +114,7 @@ impl ::std::ops::Sub for u4 {
 
 impl ::std::fmt::UpperHex for u4 {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-		write!(f, "{:X}", u8::from(*self))
+		<u8 as ::std::fmt::UpperHex>::fmt(&u8::from(*self), f)
 	}
 }
 
