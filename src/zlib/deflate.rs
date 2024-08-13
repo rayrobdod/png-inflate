@@ -356,7 +356,7 @@ mod tests {
 		fn hit_every_output() {
 			let mut res: [bool; 288] = [false; 288];
 
-			for i in u16::min_value()..u16::max_value() {
+			for i in u16::MIN..u16::MAX {
 				let bits: [u8; 2] = [((i >> 8) & 0xFF) as u8, (i & 0xFF) as u8];
 				let bits = bits.iter().cloned();
 				let mut bits = super::super::super::bits::Bits::new(bits);

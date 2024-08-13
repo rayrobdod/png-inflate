@@ -38,7 +38,7 @@ impl<I: Iterator<Item = u8>> Bits<I> {
 		Bits {
 			backing: backing,
 			current_byte: 0,
-			current_byte_read_bits: u8::max_value(),
+			current_byte_read_bits: u8::MAX,
 		}
 	}
 

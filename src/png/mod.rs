@@ -262,8 +262,8 @@ fn calculate_crc<'a, I: IntoIterator<Item = &'a u8>>(buffer: I) -> u32 {
 
 	buffer
 		.into_iter()
-		.fold(u32::max_value(), |crc, message| update_crc(crc, *message))
-		^ u32::max_value()
+		.fold(u32::MAX, |crc, message| update_crc(crc, *message))
+		^ u32::MAX
 }
 
 #[cfg(test)]
