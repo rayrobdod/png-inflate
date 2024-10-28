@@ -133,6 +133,8 @@ fn deflate_chunks(
 	ignore_unsafe_to_copy: bool,
 	process_apng: bool,
 ) -> Result<png::Chunk, Error> {
+	// Union cases are listed in the order the chunks are specified in <https://w3c.github.io/png/#11Chunks>
+	// followed by order in <https://w3c.github.io/png/extensions/Overview.html>
 	match indata.typ.as_ref() {
 		// Not compressed, but contains data that can be validated
 		b"IHDR" => {
@@ -218,10 +220,13 @@ fn deflate_chunks(
 		},
 		// Contain no compression, and are not affected by compression details of other chunks
 		#[rustfmt::skip]
-		b"PLTE" | b"IEND" | b"tRNS" | b"cHRM" | b"gAMA" |
-		b"sBIT" | b"sRGB" | b"tEXt" | b"bKGD" | b"hIST" |
-		b"pHYs" | b"sPLT" | b"tIME" | b"oFFs" | b"pCAL" |
-		b"sCAL" | b"gIFg" | b"gIFx" | b"gIFt" | b"eXIf" => {
+		b"PLTE" | b"IEND" | b"tRNS" |
+		b"cHRM" | b"gAMA" | b"sBIT" | b"sRGB" | b"cICP" | b"mCDv" | b"cLLi" |
+		b"tEXt" |
+		b"bKGD" | b"hIST" | b"pHYs" | b"sPLT" | b"eXIf" |
+		b"tIME" |
+		b"oFFs" | b"pCAL" | b"sCAL" | b"gIFg" | b"gIFx" | b"sTER" |
+		b"gIFt" => {
 			Ok(indata)
 		},
 		// (apng) Contain no compression, and are not affected by compression details of other chunks
