@@ -9,7 +9,7 @@
 * Implement option `--assume-filename` to print a filename instead of `stdin`
   in error messages when input is stdin.
 * Add PNG Third Edition W3C Candidate Recommendation Draft 18 July 2024 chunks and `sTER` to list of known chunks.
-  They are all pass through, but `cICP` and `sTER` are not safe-to-copy, so images to process can include those chunks by default now.
+  They are all pass through, but `cICP`, `mCDV`, `cLLI` and `sTER` are not safe-to-copy, so images to process can include those chunks by default now.
 
 ## [v2023.6.10] 2023-06-10
 Refactors, process improvements, dependency updating

@@ -221,7 +221,7 @@ fn deflate_chunks(
 		// Contain no compression, and are not affected by compression details of other chunks
 		#[rustfmt::skip]
 		b"PLTE" | b"IEND" | b"tRNS" |
-		b"cHRM" | b"gAMA" | b"sBIT" | b"sRGB" | b"cICP" | b"mCDv" | b"cLLi" |
+		b"cHRM" | b"gAMA" | b"sBIT" | b"sRGB" | b"cICP" | b"mDCV" | b"cLLI" |
 		b"tEXt" |
 		b"bKGD" | b"hIST" | b"pHYs" | b"sPLT" | b"eXIf" |
 		b"tIME" |
