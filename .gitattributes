@@ -5,6 +5,6 @@
 *.toml	text	diff=toml
 *.yml	text	diff=yaml
 /.gitattributes	filter=sort
-/Cargo.lock	binary
+/Cargo.lock	binary	linguist-generated=true
 /rustfmt.toml   filter=sort
 /tests/PngSuite/*	binary
