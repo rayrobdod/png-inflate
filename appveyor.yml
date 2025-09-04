@@ -5,14 +5,19 @@ environment:
   matrix:
   - TARGET: x86_64-pc-windows-msvc
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+    MINGW_PATH:
   - TARGET: i686-pc-windows-msvc
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+    MINGW_PATH:
   - TARGET: x86_64-pc-windows-gnu
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+    MINGW_PATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin
   - TARGET: i686-pc-windows-gnu
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+    MINGW_PATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin
   - TARGET: x86_64-unknown-linux-gnu
     APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
+    MINGW_PATH:
 
 cache:
   - '%USERPROFILE%\.cargo'
@@ -34,6 +39,8 @@ install:
     source $HOME/.cargo/env
 - ps: '& cargo -V'
 - ps: '& cargo install -q cargo-license'
+
+- cmd: 'set PATH=%PATH%;%MINGW_PATH%'
 
 build_script:
 - cmd: 'cargo build %MODE%'
