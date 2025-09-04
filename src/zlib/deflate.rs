@@ -517,7 +517,7 @@ mod tests {
 
 		#[test]
 		fn fixed_coded_l010d1() {
-			let exp: Vec<u8> = (0..=255).chain(std::iter::repeat(255).take(10)).collect();
+			let exp: Vec<u8> = (0..=255).chain(std::iter::repeat_n(255, 10)).collect();
 			let dut: Vec<u8> = [0, 0, 1, 0xFF, 0xFE]
 				.iter()
 				.cloned()
@@ -532,7 +532,7 @@ mod tests {
 
 		#[test]
 		fn fixed_coded_l257d1() {
-			let exp: Vec<u8> = (0..=255).chain(std::iter::repeat(255).take(257)).collect();
+			let exp: Vec<u8> = (0..=255).chain(std::iter::repeat_n(255, 257)).collect();
 			let dut: Vec<u8> = [0, 0, 1, 0xFF, 0xFE]
 				.iter()
 				.cloned()
@@ -547,7 +547,7 @@ mod tests {
 
 		#[test]
 		fn fixed_coded_l258d1() {
-			let exp: Vec<u8> = (0..=255).chain(std::iter::repeat(255).take(258)).collect();
+			let exp: Vec<u8> = (0..=255).chain(std::iter::repeat_n(255, 258)).collect();
 			let dut: Vec<u8> = [0, 0, 1, 0xFF, 0xFE]
 				.iter()
 				.cloned()
@@ -607,15 +607,14 @@ mod tests {
 
 		#[test]
 		fn fixed_codes_l003d24577() {
-			let base: Vec<u8> = std::iter::repeat(5)
-				.take(16)
-				.chain(std::iter::repeat(80).take(3))
-				.chain(std::iter::repeat(120).take(24574))
+			let base: Vec<u8> = std::iter::repeat_n(5, 16)
+				.chain(std::iter::repeat_n(80, 3))
+				.chain(std::iter::repeat_n(120, 24574))
 				.collect();
 			let exp: Vec<u8> = base
 				.iter()
 				.cloned()
-				.chain(std::iter::repeat(80).take(3))
+				.chain(std::iter::repeat_n(80, 3))
 				.collect();
 			let dut: Vec<u8> = [0, 0x11, 0x60, 0xEE, 0x9F]
 				.iter()
@@ -631,15 +630,14 @@ mod tests {
 
 		#[test]
 		fn fixed_codes_l003d32768() {
-			let base: Vec<u8> = std::iter::repeat(5)
-				.take(16)
-				.chain(std::iter::repeat(80).take(3))
-				.chain(std::iter::repeat(120).take(32768 - 3))
+			let base: Vec<u8> = std::iter::repeat_n(5, 16)
+				.chain(std::iter::repeat_n(80, 3))
+				.chain(std::iter::repeat_n(120, 32768 - 3))
 				.collect();
 			let exp: Vec<u8> = base
 				.iter()
 				.cloned()
-				.chain(std::iter::repeat(80).take(3))
+				.chain(std::iter::repeat_n(80, 3))
 				.collect();
 			let dut: Vec<u8> = [0, 0x10, 0x80, 0xEF, 0x7F]
 				.iter()

@@ -183,7 +183,7 @@ fn deflate_chunks(
 				let newdata: Vec<u8> = keyword
 					.iter()
 					.cloned()
-					.chain(std::iter::repeat(0).take(2))
+					.chain(std::iter::repeat_n(0, 2))
 					.chain(iter)
 					.collect();
 				Ok(png::Chunk {
